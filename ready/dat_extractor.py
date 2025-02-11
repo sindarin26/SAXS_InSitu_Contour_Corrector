@@ -55,15 +55,12 @@ def parse_dat_file(dat_path):
     
     return {"q": q_values, "Intensity": intensity_values}, None
 
-def process_dat_files(dat_dir, log_path, output_dir):
-    log_path = Path(log_path).resolve()
-    extracted_data = parse_log_file(log_path)
-    error_log = extracted_data.get("Error Log", [])
-    
+def process_dat_files(dat_dir, extracted_data, output_dir):
     dat_dir = Path(dat_dir).resolve()
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    error_log = extracted_data.get("Error Log", [])
     dat_files = list(dat_dir.glob("*.dat"))
     processed_series = set()
     
@@ -91,14 +88,15 @@ def process_dat_files(dat_dir, log_path, output_dir):
     
     extracted_data["Error Log"] = error_log
     
-    output_file = output_dir / f"{log_path.stem}_extracted_dat.json"
+    output_file = output_dir / "extracted_dat.json"
     with output_file.open('w', encoding='utf-8') as json_file:
         json.dump(extracted_data, json_file, indent=4)
     
     return extracted_data, output_file
 
 def main(dat_dir, log_path, output_dir):
-    extracted_data, output_file = process_dat_files(dat_dir, log_path, output_dir)
+    extracted_data = parse_log_file(log_path)
+    extracted_data, output_file = process_dat_files(dat_dir, extracted_data, output_dir)
     
     # Summary print
     total_items = len(extracted_data) - 1  # Exclude "Error Log"
@@ -119,7 +117,6 @@ def main(dat_dir, log_path, output_dir):
         print("Error Log:")
         for error in extracted_data["Error Log"]:
             print(error)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
