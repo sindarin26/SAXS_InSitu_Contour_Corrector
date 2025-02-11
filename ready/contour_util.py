@@ -134,7 +134,7 @@ def plot_contour(contour_data, temp=False, legend=True):
             sharey=True,            # y축(시간) 동일
             figsize=(12, 8), 
             dpi=300, 
-            gridspec_kw={"width_ratios": [5, 2]}  # 왼쪽은 넓게, 오른쪽은 좁게
+            gridspec_kw={"width_ratios": [7, 2]}  # 왼쪽은 넓게, 오른쪽은 좁게
         )
         plt.subplots_adjust(wspace=0.00)  # 두 플롯 사이 간격 최소화
 
@@ -158,7 +158,7 @@ def plot_contour(contour_data, temp=False, legend=True):
         # 컬러바(범례) 왼쪽 배치
         if legend:
             # Matplotlib >=3.3에서는 location='left' 사용 가능
-            c = fig.colorbar(cp, ax=ax_contour, orientation='vertical', location='left')
+            c = fig.colorbar(cp, ax=ax_contour, orientation='vertical', location='left', pad=0.15)
             c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
         
         # ---- 2.2) 오른쪽(Temperature vs Time) ----
@@ -189,7 +189,7 @@ def plot_contour(contour_data, temp=False, legend=True):
         )
         
         if legend:
-            c = fig.colorbar(cp, ax=ax, orientation='vertical', location='left')
+            c = fig.colorbar(cp, ax=ax, orientation='vertical', location='left', pad=0.15)
             c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
         
         ax.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
