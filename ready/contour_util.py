@@ -418,7 +418,7 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
             )
 
     plt.show()
-    
+
 # ------------------------------------------------------------------------
 # FUNCTIONS FOR TEMPERATURE CORRECTION
 # ------------------------------------------------------------------------
@@ -555,7 +555,7 @@ def temp_correction(extracted_data, selected_series, normal_range, adjust_range,
 
 def main(dat_dir, log_path, output_dir):
     log_data = parse_log_file(log_path)
-    extracted_data, output_file = process_dat_files(dat_dir, log_data, output_dir)
+    extracted_data = process_dat_files(dat_dir, log_data)
     
     # 시리즈 선택
     selected_series = select_series(extracted_data)
