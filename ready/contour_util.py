@@ -75,56 +75,131 @@ def extract_contour_data(selected_series, extracted_data):
         ]
     }
 
-def plot_contour(contour_data):
-    """Generate contour plot with interpolated data, using percentile scaling and colormap."""
+def plot_contour(contour_data, temp=False, legend=True):
+    """
+    Generate contour plot with interpolated data.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        {
+          "Series": str,
+          "Time-temp": ([times], [temperatures]),
+          "Data": [
+              {"Time": t1, "q": [...], "Intensity": [...]},
+              {"Time": t2, "q": [...], "Intensity": [...]},
+              ...
+          ]
+        }
+    temp : bool
+        False -> 기존처럼 칸투어만 그림
+        True -> 오른쪽에 Temperature vs Time 플롯을 추가
+    legend : bool
+        True -> 컬러바(범례) 표시, False -> 컬러바 표시 안 함
+    """
     times, temperatures = contour_data["Time-temp"]
+
+    # ---------- 1) 칸투어 그리기 위한 데이터 전처리 ----------
+    # 모든 q, intensity, time 데이터 펼치기
     q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
     intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
     time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
-    
-    # Generate a regular grid for q values with max resolution from original x-axis data
+
+    # q축의 공통 그리드 & time축의 공통 그리드
     q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
-    time_common = np.unique(time_all)  # Use unique times without interpolation
-    
-    # Interpolate intensity values onto the regular grid
+    time_common = np.unique(time_all)
+
+    # 보간
     grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
-    
+    grid_intensity = griddata(
+        (q_all, time_all), 
+        intensity_all, 
+        (grid_q, grid_time), 
+        method='nearest'
+    )
+
     if grid_intensity is None or np.isnan(grid_intensity).all():
         print("Warning: All interpolated intensity values are NaN. Check input data.")
         return
     
-    # Apply percentile-based scaling for contrast adjustment
+    # 퍼센타일 기반 명암 대비 조정
     lower_bound = np.nanpercentile(grid_intensity, 0.1)
     upper_bound = np.nanpercentile(grid_intensity, 98)
-    
-    plt.figure(figsize=(12, 8), dpi=300)
-    cp = plt.contourf(
-        grid_q, grid_time, grid_intensity, 
-        levels=100, 
-        cmap='inferno', 
-        vmin=lower_bound, 
-        vmax=upper_bound
-    )
-    
-    # Colorbar setup
-    c = plt.colorbar(cp, orientation='vertical')
-    c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-    
-    # Labels
-    plt.xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-    plt.ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
-    
-    # Axis settings
-    plt.xticks(fontsize=12, fontweight='bold', fontname='Times New Roman')
-    plt.yticks(fontsize=12, fontweight='bold', fontname='Times New Roman')
-    
-    plt.title(
-        f"Contour Plot for {contour_data['Series']}", 
-        fontsize=16, fontweight='bold', fontname='Times New Roman'
-    )
-    plt.show()
 
+    # ---------- 2) 서브플롯 레이아웃 결정 ----------
+    if temp:
+        # temp=True 이면, 좌측(칸투어), 우측(온도-시간) 2개 서브플롯
+        fig, (ax_contour, ax_temp) = plt.subplots(
+            ncols=2, 
+            sharey=True,            # y축(시간) 동일
+            figsize=(12, 8), 
+            dpi=300, 
+            gridspec_kw={"width_ratios": [5, 2]}  # 왼쪽은 넓게, 오른쪽은 좁게
+        )
+        plt.subplots_adjust(wspace=0.00)  # 두 플롯 사이 간격 최소화
+
+        # ---- 2.1) 왼쪽(칸투어) ----
+        cp = ax_contour.contourf(
+            grid_q, 
+            grid_time, 
+            grid_intensity, 
+            levels=100, 
+            cmap='inferno', 
+            vmin=lower_bound, 
+            vmax=upper_bound
+        )
+        ax_contour.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax_contour.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax_contour.set_title(f"Contour Plot for {contour_data['Series']}",
+                             fontsize=16, fontweight='bold', fontname='Times New Roman')
+        ax_contour.tick_params(axis='x', labelsize=12)
+        ax_contour.tick_params(axis='y', labelsize=12)
+
+        # 컬러바(범례) 왼쪽 배치
+        if legend:
+            # Matplotlib >=3.3에서는 location='left' 사용 가능
+            c = fig.colorbar(cp, ax=ax_contour, orientation='vertical', location='left')
+            c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        
+        # ---- 2.2) 오른쪽(Temperature vs Time) ----
+        # time이 y축, temp가 x축
+        ax_temp.plot(temperatures, times, 'r-')  # 온도를 x, 시간을 y
+        # x축 범위: 왼쪽(높은온도) -> 오른쪽(낮은온도)이 되도록 반전
+        ax_temp.invert_xaxis()
+
+        # y축 라벨을 오른쪽으로
+        ax_temp.yaxis.set_label_position("right")
+        ax_temp.yaxis.tick_right()
+        ax_temp.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax_temp.set_xlabel("Temperature", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax_temp.tick_params(axis='x', labelsize=12)
+        ax_temp.tick_params(axis='y', labelsize=12)
+
+    else:
+        # temp=False 이면, 기존처럼 1개 플롯(칸투어)만
+        fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+        cp = ax.contourf(
+            grid_q, 
+            grid_time, 
+            grid_intensity, 
+            levels=100, 
+            cmap='inferno', 
+            vmin=lower_bound, 
+            vmax=upper_bound
+        )
+        
+        if legend:
+            c = fig.colorbar(cp, ax=ax, orientation='vertical', location='left')
+            c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        
+        ax.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
+        ax.set_title(f"Contour Plot for {contour_data['Series']}",
+                     fontsize=16, fontweight='bold', fontname='Times New Roman')
+        ax.tick_params(axis='x', labelsize=12)
+        ax.tick_params(axis='y', labelsize=12)
+
+    plt.show()
 
 # ------------------------------------------------------------------------
 # NEW FUNCTIONS FOR TEMPERATURE CORRECTION
@@ -297,7 +372,7 @@ def main(dat_dir, log_path, output_dir):
             print(f"Warning: Missing data detected in time frame {entry['Time']}")
     
     # 최종 플롯
-    plot_contour(contour_data)
+    plot_contour(contour_data, temp=True, legend=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
