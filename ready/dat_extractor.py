@@ -27,7 +27,6 @@
 #     ]
 # }
 
-
 import json
 import argparse
 from pathlib import Path
@@ -64,6 +63,7 @@ def process_dat_files(dat_dir, log_path, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     
     dat_files = list(dat_dir.glob("*.dat"))
+    processed_series = set()
     
     for dat_file in dat_files:
         filename = dat_file.stem  # Remove extension
@@ -78,6 +78,14 @@ def process_dat_files(dat_dir, log_path, output_dir):
         
         extracted_data[filename]["q"] = parsed_data["q"]
         extracted_data[filename]["Intensity"] = parsed_data["Intensity"]
+        
+        if "Series" in extracted_data[filename]:
+            processed_series.add(extracted_data[filename]["Series"])
+    
+    for filename, data in extracted_data.items():
+        if "Series" in data and data["Series"] in processed_series:
+            if "q" not in data or "Intensity" not in data:
+                error_log.append(f"[process_dat_files] {filename} is missing q/Intensity data. Dat file missing for series {data['Series']}.")
     
     extracted_data["Error Log"] = error_log
     
@@ -85,14 +93,35 @@ def process_dat_files(dat_dir, log_path, output_dir):
     with output_file.open('w', encoding='utf-8') as json_file:
         json.dump(extracted_data, json_file, indent=4)
     
-    print(f"Processing complete. Data saved to {output_file}")
+    return extracted_data, output_file
 
 def main(dat_dir, log_path, output_dir):
-    process_dat_files(dat_dir, log_path, output_dir)
+    extracted_data, output_file = process_dat_files(dat_dir, log_path, output_dir)
+    
+    # Summary print
+    total_items = len(extracted_data) - 1  # Exclude "Error Log"
+    non_series_items = sum(1 for data in extracted_data.values() if "Series" not in data)
+    series_items = total_items - non_series_items
+    series_types = {data["Series"] for data in extracted_data.values() if "Series" in data}
+    
+    print(f"Total extracted items: {total_items}")
+    print(f"Non-series items: {non_series_items}")
+    print(f"Series items: {series_items}")
+    print("Extracted series types:")
+    for series in series_types:
+        print(f" - {series}")
+    
+    print(f"Extraction complete. Data saved to {output_file}")
+    
+    if extracted_data["Error Log"]:
+        print("Error Log:")
+        for error in extracted_data["Error Log"]:
+            print(error)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
-    parser.add_argument("input", nargs="?", default='/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged/1st/', help="Directory containing .dat files")
+    parser.add_argument("input", nargs="?", default='/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged', help="Directory containing .dat files")
     parser.add_argument("log", nargs="?", default="./ready/log241219-HS", help="Path to the log file")
     parser.add_argument("output", nargs="?", default="./ready/test_output", help="Directory to save the extracted JSON file")
     args = parser.parse_args()
