@@ -154,12 +154,17 @@ def plot_contour(contour_data, temp=False, legend=True):
                              fontsize=16, fontweight='bold', fontname='Times New Roman')
         ax_contour.tick_params(axis='x', labelsize=12)
         ax_contour.tick_params(axis='y', labelsize=12)
+        for label in ax_contour.get_xticklabels() + ax_contour.get_yticklabels():
+            label.set_fontname('Times New Roman')
 
         # 컬러바(범례) 왼쪽 배치
         if legend:
             # Matplotlib >=3.3에서는 location='left' 사용 가능
             c = fig.colorbar(cp, ax=ax_contour, orientation='vertical', location='left', pad=0.15)
             c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+            c.ax.tick_params(labelsize=12)
+            for label in c.ax.get_yticklabels():
+                label.set_fontname('Times New Roman')
         
         # ---- 2.2) 오른쪽(Temperature vs Time) ----
         # time이 y축, temp가 x축
@@ -172,8 +177,13 @@ def plot_contour(contour_data, temp=False, legend=True):
         ax_temp.yaxis.tick_right()
         ax_temp.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
         ax_temp.set_xlabel("Temperature", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax_temp.tick_params(axis='x', labelsize=12)
-        ax_temp.tick_params(axis='y', labelsize=12)
+        ax_temp.tick_params(axis='x', labelsize=12, direction='in')
+        ax_temp.tick_params(axis='y', labelsize=12, direction='in')
+        for label in ax_temp.get_xticklabels() + ax_temp.get_yticklabels():
+            label.set_fontname('Times New Roman')
+        
+        # Grid 추가
+        ax_temp.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
     else:
         # temp=False 이면, 기존처럼 1개 플롯(칸투어)만
@@ -191,6 +201,9 @@ def plot_contour(contour_data, temp=False, legend=True):
         if legend:
             c = fig.colorbar(cp, ax=ax, orientation='vertical', location='left', pad=0.15)
             c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
+            c.ax.tick_params(labelsize=12)
+            for label in c.ax.get_yticklabels():
+                label.set_fontname('Times New Roman')
         
         ax.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
         ax.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
@@ -198,6 +211,8 @@ def plot_contour(contour_data, temp=False, legend=True):
                      fontsize=16, fontweight='bold', fontname='Times New Roman')
         ax.tick_params(axis='x', labelsize=12)
         ax.tick_params(axis='y', labelsize=12)
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontname('Times New Roman')
 
     plt.show()
 
