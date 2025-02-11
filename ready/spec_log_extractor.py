@@ -14,7 +14,9 @@
 #         "Temperature": 0.0,
 #         "9": 0.0,
 #         "Time": "YYYY-MM-DD HH:MM:SS",
-#         "Elapsed Time": 0
+#         "Elapsed Time": 0,
+#         "Series": "series_name",
+#         "Series Index": 1
 #     },
 #     "filename2": { ... },
 #     ...
