@@ -1,12 +1,9 @@
-import json
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 from scipy.interpolate import griddata
 from spec_log_extractor import parse_log_file
 from dat_extractor import process_dat_files
-from collections import OrderedDict
 
 def select_series(extracted_data):
     """Extract series with q and Intensity, prompt selection if multiple."""
@@ -217,7 +214,7 @@ def plot_contour(contour_data, temp=False, legend=True):
     plt.show()
 
 # ------------------------------------------------------------------------
-# NEW FUNCTIONS FOR TEMPERATURE CORRECTION
+# FUNCTIONS FOR TEMPERATURE CORRECTION
 # ------------------------------------------------------------------------
 
 def select_temperature_ranges(extracted_data, selected_series, debug=False):
@@ -296,15 +293,7 @@ def temp_correction(extracted_data, selected_series, normal_range, adjust_range,
     adjust_indices = np.where(adjust_mask)[0]  # adjust_range 내에 해당하는 인덱스
     
     # 3) adjust_range 내에서 온도 변화량이 0인 구간 찾기
-    #    예) i, i-1 의 temp 차이가 0 => 연속적으로 0이 2번 이상인 구간
-    #    실은 "변화량이 0인 지점"이 여러개 있을 수 있으므로,
-    #    간단히는 adjust_range 내부 전체를 "피팅값"으로 강제 덮어씌우는 방법도 가능.
-    #
-    #    문제에서 '승온중에 "10 11 11 13" 이렇게 중간이 0증가 구간' => "11->11" 이 문제
-    #    여기서는 조금 단순화하여, "변화량 = 0인 지점"을 모두 피팅값으로 교정한다고 가정.
-    
-    # (여기서는 예시로, adjust_range 범위 전체에 대해서
-    #  diff(temp) = 0 인 부분만 찾아서 교정한다고 예시 코드를 작성합니다.)
+    #  diff(temp) = 0 인 부분만 찾아서 교정
     diffs = np.diff(temps[adjust_mask])
     zero_diff_indices = np.where(diffs == 0)[0]  # local index
     
@@ -367,7 +356,6 @@ def main(dat_dir, log_path, output_dir):
     
     # --- (Option) 온도 보정 구간 선택 단계 ---
     # 사용자에게 normal_range, adjust_range를 선택하게 함.
-    # 아래 코드는 예시이며, 실제로는 --debug 플래그나 특정 사용자 선택 시에만 수행하도록 구성할 수도 있음.
     normal_range, adjust_range = select_temperature_ranges(extracted_data, selected_series, debug=True)
     
     # 실제로 온도 보정 수행
