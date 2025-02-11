@@ -72,10 +72,10 @@ def extract_contour_data(selected_series, extracted_data):
         ]
     }
 
-def plot_contour(contour_data, temp=False, legend=True):
+def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
     """
-    Generate contour plot with interpolated data.
-    
+    Generate contour plot with interpolated data, optionally with a Temperature vs Time subplot.
+
     Parameters
     ----------
     contour_data : dict
@@ -89,130 +89,336 @@ def plot_contour(contour_data, temp=False, legend=True):
           ]
         }
     temp : bool
-        False -> 기존처럼 칸투어만 그림
-        True -> 오른쪽에 Temperature vs Time 플롯을 추가
+        False -> 칸투어만 그림
+        True  -> 오른쪽에 Temperature vs Time 플롯 추가
     legend : bool
-        True -> 컬러바(범례) 표시, False -> 컬러바 표시 안 함
+        True  -> 컬러바(범례) 표시
+        False -> 컬러바 표시 안 함
+    graph_option : dict
+        그래프의 폰트/범위/레이블 등 사용자 지정 옵션 딕셔너리.
+        None 또는 빈 딕셔너리 이면 기본 옵션을 사용.
     """
+
+    # ========== (1) 기본 옵션 정의 ==========
+    default_graph_option = {
+        # 1) Figure 전체 설정
+        "figure_size": (12, 8),
+        "figure_dpi": 300,
+        "figure_title_enable": False,    # 전체 Figure에 suptitle 달지 여부
+        "figure_title_text": "",
+
+        # 2) 폰트 및 크기 설정
+        "font_label": "Times New Roman",      # x, y축 레이블/컬러바 레이블 폰트
+        "font_tick": "Times New Roman",       # 틱 라벨 폰트
+        "font_title": "Times New Roman",      # 그래프 타이틀 폰트
+        "axes_label_size": 14,                # 축 라벨 폰트 크기
+        "tick_label_size": 12,                # 틱 라벨 폰트 크기
+        "title_size": 16,                     # 타이틀 폰트 크기
+
+        # 3) Contour subplot 설정
+        "contour_xlabel_enable": True,
+        "contour_xlabel_text": "2theta (Cu K-alpha)",
+        "contour_ylabel_enable": True,
+        "contour_ylabel_text": "Elapsed Time",
+        "contour_title_enable": True,
+        "contour_title_text": "Contour Plot",
+        "contour_xlim": None,    # (xmin, xmax) or None
+        "contour_grid": False,   # Grid 표시 여부
+
+        # 4) Temp subplot 설정 (temp=True 일 때만)
+        "temp_xlabel_enable": True,
+        "temp_xlabel_text": "Temperature",
+        "temp_ylabel_enable": True,
+        "temp_ylabel_text": "Elapsed Time",
+        "temp_title_enable": False,
+        "temp_title_text": "Temperature Plot",
+        "temp_xlim": None,       # (xmin, xmax) or None
+        "temp_grid": True,       # Temp 그래프 Grid 표시 여부
+
+        # 5) Y축 범위(공유)
+        "global_ylim": None,     # (ymin, ymax) or None
+
+        # 6) 서브플롯 간격
+        "wspace": 0.00,
+        "width_ratios": [7, 2],  # 칸투어 : 온도 그래프 너비 비율
+
+        # 7) 칸투어 옵션
+        "contour_levels": 100,
+        "contour_cmap": "inferno",
+        "contour_lower_percentile": 0.1,
+        "contour_upper_percentile": 98,
+
+        # 8) Colorbar 옵션
+        "colorbar_label": "log10(Intensity)",
+        "cbar_location": "left",   # 'left' or 'right' (Matplotlib 3.3+)
+        "cbar_pad": 0.15
+    }
+
+    # (1b) 사용자 옵션 merge
+    if graph_option is None:
+        graph_option = {}
+    final_opt = {**default_graph_option, **graph_option}
+
+    # ========== (2) contour_data 에서 기본 데이터 추출 ==========
     times, temperatures = contour_data["Time-temp"]
 
-    # ---------- 1) 칸투어 그리기 위한 데이터 전처리 ----------
-    # 모든 q, intensity, time 데이터 펼치기
+    # 모든 q, intensity, time 1D array화
     q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
     intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
     time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
 
-    # q축의 공통 그리드 & time축의 공통 그리드
+    # q축 / time축 공통 그리드
     q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
     time_common = np.unique(time_all)
 
     # 보간
     grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata(
-        (q_all, time_all), 
-        intensity_all, 
-        (grid_q, grid_time), 
-        method='nearest'
-    )
-
+    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
     if grid_intensity is None or np.isnan(grid_intensity).all():
         print("Warning: All interpolated intensity values are NaN. Check input data.")
         return
-    
-    # 퍼센타일 기반 명암 대비 조정
-    lower_bound = np.nanpercentile(grid_intensity, 0.1)
-    upper_bound = np.nanpercentile(grid_intensity, 98)
 
-    # ---------- 2) 서브플롯 레이아웃 결정 ----------
+    # 퍼센타일로 명암 대비 설정
+    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
+    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
+
+    # ========== (3) Figure 생성 ==========
     if temp:
-        # temp=True 이면, 좌측(칸투어), 우측(온도-시간) 2개 서브플롯
+        # temp=True → 2개 subplot (왼쪽: 칸투어, 오른쪽: temp), sharey=True
         fig, (ax_contour, ax_temp) = plt.subplots(
-            ncols=2, 
-            sharey=True,            # y축(시간) 동일
-            figsize=(12, 8), 
-            dpi=300, 
-            gridspec_kw={"width_ratios": [7, 2]}  # 왼쪽은 넓게, 오른쪽은 좁게
+            ncols=2,
+            sharey=True,
+            figsize=final_opt["figure_size"],
+            dpi=final_opt["figure_dpi"],
+            gridspec_kw={"width_ratios": final_opt["width_ratios"]}
         )
-        plt.subplots_adjust(wspace=0.00)  # 두 플롯 사이 간격 최소화
+        plt.subplots_adjust(wspace=final_opt["wspace"])
 
-        # ---- 2.1) 왼쪽(칸투어) ----
+        # -------- (A) 칸투어 subplot --------
         cp = ax_contour.contourf(
-            grid_q, 
-            grid_time, 
-            grid_intensity, 
-            levels=100, 
-            cmap='inferno', 
-            vmin=lower_bound, 
+            grid_q,
+            grid_time,
+            grid_intensity,
+            levels=final_opt["contour_levels"],
+            cmap=final_opt["contour_cmap"],
+            vmin=lower_bound,
             vmax=upper_bound
         )
-        ax_contour.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax_contour.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax_contour.set_title(f"Contour Plot for {contour_data['Series']}",
-                             fontsize=16, fontweight='bold', fontname='Times New Roman')
-        ax_contour.tick_params(axis='x', labelsize=12)
-        ax_contour.tick_params(axis='y', labelsize=12)
-        for label in ax_contour.get_xticklabels() + ax_contour.get_yticklabels():
-            label.set_fontname('Times New Roman')
 
-        # 컬러바(범례) 왼쪽 배치
+        # x, y축 범위
+        if final_opt["contour_xlim"] is not None:
+            ax_contour.set_xlim(final_opt["contour_xlim"])
+        if final_opt["global_ylim"] is not None:
+            ax_contour.set_ylim(final_opt["global_ylim"])
+
+        # X 라벨
+        if final_opt["contour_xlabel_enable"]:
+            ax_contour.set_xlabel(
+                final_opt["contour_xlabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+        # Y 라벨
+        if final_opt["contour_ylabel_enable"]:
+            ax_contour.set_ylabel(
+                final_opt["contour_ylabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+
+        # 타이틀
+        if final_opt["contour_title_enable"]:
+            ax_contour.set_title(
+                final_opt["contour_title_text"],
+                fontsize=final_opt["title_size"],
+                fontweight='bold',
+                fontname=final_opt["font_title"]
+            )
+
+        # 틱 라벨 폰트
+        ax_contour.tick_params(axis='x', labelsize=final_opt["tick_label_size"])
+        ax_contour.tick_params(axis='y', labelsize=final_opt["tick_label_size"])
+        for lbl in ax_contour.get_xticklabels() + ax_contour.get_yticklabels():
+            lbl.set_fontname(final_opt["font_tick"])
+
+        # Grid 여부
+        if final_opt["contour_grid"]:
+            ax_contour.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+        # 컬러바
         if legend:
-            # Matplotlib >=3.3에서는 location='left' 사용 가능
-            c = fig.colorbar(cp, ax=ax_contour, orientation='vertical', location='left', pad=0.15)
-            c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-            c.ax.tick_params(labelsize=12)
-            for label in c.ax.get_yticklabels():
-                label.set_fontname('Times New Roman')
-        
-        # ---- 2.2) 오른쪽(Temperature vs Time) ----
-        # time이 y축, temp가 x축
-        ax_temp.plot(temperatures, times, 'r-')  # 온도를 x, 시간을 y
-        # x축 범위: 왼쪽(높은온도) -> 오른쪽(낮은온도)이 되도록 반전
-        ax_temp.invert_xaxis()
+            c = fig.colorbar(
+                cp, ax=ax_contour,
+                orientation='vertical',
+                location=final_opt["cbar_location"],
+                pad=final_opt["cbar_pad"]
+            )
+            c.set_label(
+                final_opt["colorbar_label"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+            c.ax.tick_params(labelsize=final_opt["tick_label_size"])
+            for clbl in c.ax.get_yticklabels():
+                clbl.set_fontname(final_opt["font_tick"])
 
-        # y축 라벨을 오른쪽으로
-        ax_temp.yaxis.set_label_position("right")
-        ax_temp.yaxis.tick_right()
-        ax_temp.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax_temp.set_xlabel("Temperature", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax_temp.tick_params(axis='x', labelsize=12, direction='in')
-        ax_temp.tick_params(axis='y', labelsize=12, direction='in')
-        for label in ax_temp.get_xticklabels() + ax_temp.get_yticklabels():
-            label.set_fontname('Times New Roman')
-        
-        # Grid 추가
-        ax_temp.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        # -------- (B) Temp subplot --------
+        ax_temp.plot(temperatures, times, 'r-')
+        ax_temp.invert_xaxis()  # 왼쪽=고온, 오른쪽=저온
+
+        # x, y축 범위
+        if final_opt["temp_xlim"] is not None:
+            ax_temp.set_xlim(final_opt["temp_xlim"])
+        # y축은 sharey=True → contour와 동일
+        if final_opt["global_ylim"] is not None:
+            ax_temp.set_ylim(final_opt["global_ylim"])
+
+        # Temp X 라벨
+        if final_opt["temp_xlabel_enable"]:
+            ax_temp.set_xlabel(
+                final_opt["temp_xlabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+        else:
+            # 숨기기
+            ax_temp.set_xlabel("")
+
+        # Temp Y 라벨
+        if final_opt["temp_ylabel_enable"]:
+            ax_temp.yaxis.set_label_position("right")
+            ax_temp.yaxis.tick_right()
+            ax_temp.set_ylabel(
+                final_opt["temp_ylabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+        else:
+            # 숨길 경우
+            ax_temp.yaxis.set_label_position("right")
+            ax_temp.yaxis.tick_right()
+            ax_temp.set_ylabel("")
+
+        # Temp 타이틀
+        if final_opt["temp_title_enable"]:
+            ax_temp.set_title(
+                final_opt["temp_title_text"],
+                fontsize=final_opt["title_size"],
+                fontweight='bold',
+                fontname=final_opt["font_title"]
+            )
+
+        # 틱 라벨 폰트
+        ax_temp.tick_params(axis='x', labelsize=final_opt["tick_label_size"], direction='in')
+        ax_temp.tick_params(axis='y', labelsize=final_opt["tick_label_size"], direction='in')
+        for lbl in ax_temp.get_xticklabels() + ax_temp.get_yticklabels():
+            lbl.set_fontname(final_opt["font_tick"])
+
+        # Grid
+        if final_opt["temp_grid"]:
+            ax_temp.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+        # Figure 전체 타이틀
+        if final_opt["figure_title_enable"]:
+            fig.suptitle(
+                final_opt["figure_title_text"],
+                fontsize=final_opt["title_size"],
+                fontweight='bold',
+                fontname=final_opt["font_title"]
+            )
 
     else:
-        # temp=False 이면, 기존처럼 1개 플롯(칸투어)만
-        fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+        # temp=False → 칸투어 플롯만
+        fig, ax = plt.subplots(
+            figsize=final_opt["figure_size"],
+            dpi=final_opt["figure_dpi"]
+        )
         cp = ax.contourf(
-            grid_q, 
-            grid_time, 
-            grid_intensity, 
-            levels=100, 
-            cmap='inferno', 
-            vmin=lower_bound, 
+            grid_q,
+            grid_time,
+            grid_intensity,
+            levels=final_opt["contour_levels"],
+            cmap=final_opt["contour_cmap"],
+            vmin=lower_bound,
             vmax=upper_bound
         )
-        
+
+        # x, y축 범위
+        if final_opt["contour_xlim"] is not None:
+            ax.set_xlim(final_opt["contour_xlim"])
+        if final_opt["global_ylim"] is not None:
+            ax.set_ylim(final_opt["global_ylim"])
+
+        # X 라벨
+        if final_opt["contour_xlabel_enable"]:
+            ax.set_xlabel(
+                final_opt["contour_xlabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+        # Y 라벨
+        if final_opt["contour_ylabel_enable"]:
+            ax.set_ylabel(
+                final_opt["contour_ylabel_text"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+
+        # 타이틀
+        if final_opt["contour_title_enable"]:
+            ax.set_title(
+                final_opt["contour_title_text"],
+                fontsize=final_opt["title_size"],
+                fontweight='bold',
+                fontname=final_opt["font_title"]
+            )
+
+        # 틱 라벨 폰트
+        ax.tick_params(axis='x', labelsize=final_opt["tick_label_size"])
+        ax.tick_params(axis='y', labelsize=final_opt["tick_label_size"])
+        for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+            lbl.set_fontname(final_opt["font_tick"])
+
+        # Grid
+        if final_opt["contour_grid"]:
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+        # 컬러바
         if legend:
-            c = fig.colorbar(cp, ax=ax, orientation='vertical', location='left', pad=0.15)
-            c.set_label("log10(Intensity)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-            c.ax.tick_params(labelsize=12)
-            for label in c.ax.get_yticklabels():
-                label.set_fontname('Times New Roman')
-        
-        ax.set_xlabel("2theta (Cu K-alpha)", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax.set_ylabel("Elapsed Time", fontsize=14, fontweight='bold', fontname='Times New Roman')
-        ax.set_title(f"Contour Plot for {contour_data['Series']}",
-                     fontsize=16, fontweight='bold', fontname='Times New Roman')
-        ax.tick_params(axis='x', labelsize=12)
-        ax.tick_params(axis='y', labelsize=12)
-        for label in ax.get_xticklabels() + ax.get_yticklabels():
-            label.set_fontname('Times New Roman')
+            c = fig.colorbar(
+                cp, ax=ax,
+                orientation='vertical',
+                location=final_opt["cbar_location"],
+                pad=final_opt["cbar_pad"]
+            )
+            c.set_label(
+                final_opt["colorbar_label"],
+                fontsize=final_opt["axes_label_size"],
+                fontweight='bold',
+                fontname=final_opt["font_label"]
+            )
+            c.ax.tick_params(labelsize=final_opt["tick_label_size"])
+            for clbl in c.ax.get_yticklabels():
+                clbl.set_fontname(final_opt["font_tick"])
+
+        # Figure 전체 타이틀
+        if final_opt["figure_title_enable"]:
+            fig.suptitle(
+                final_opt["figure_title_text"],
+                fontsize=final_opt["title_size"],
+                fontweight='bold',
+                fontname=final_opt["font_title"]
+            )
 
     plt.show()
-
+    
 # ------------------------------------------------------------------------
 # FUNCTIONS FOR TEMPERATURE CORRECTION
 # ------------------------------------------------------------------------
