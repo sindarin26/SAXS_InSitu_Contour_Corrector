@@ -52,6 +52,7 @@ def parse_log_file(log_path):
         return extracted_data
     
     time_reference = None
+    series_data = {}
     
     for line in z_lines:
         parts = line.split()
@@ -63,12 +64,19 @@ def parse_log_file(log_path):
         file_path = Path(parts[1]).resolve()
         filename = file_path.stem
         
-        match = re.search(r'_(\d{4})$', filename)
-        if not match:
-            error_log.append(f"[parse_log_file] No valid index found in filename: {filename}")
-            continue
-        
-        index = int(match.group(1))
+        series_name = None
+        series_index = None
+        match = re.search(r'_(\d+)_(\d{4})$', filename)
+        if match:
+            series_index = int(match.group(1))
+            index = int(match.group(2))
+            series_name = filename.rsplit('_', 2)[0]
+        else:
+            match = re.search(r'_(\d{4})$', filename)
+            if not match:
+                error_log.append(f"[parse_log_file] No valid index found in filename: {filename}")
+                continue
+            index = int(match.group(1))
         
         try:
             exposure_time = round(float(parts[2]), 1)
@@ -107,6 +115,20 @@ def parse_log_file(log_path):
             "Time": time_obj.strftime("%Y-%m-%d %H:%M:%S"),
             "Elapsed Time": elapsed_time
         }
+        
+        if series_name is not None:
+            extracted_data[filename]["Series"] = series_name
+            extracted_data[filename]["Series Index"] = series_index
+            if series_name not in series_data:
+                series_data[series_name] = {}
+            series_data[series_name][series_index] = elapsed_time
+    
+    for filename, data in extracted_data.items():
+        if "Series" in data and "Series Index" in data:
+            series_name = data["Series"]
+            series_index = data["Series Index"]
+            if 1 in series_data[series_name]:
+                data["Series Elapsed Time"] = data["Elapsed Time"] - series_data[series_name][1]
     
     indices = sorted([data["Index"] for data in extracted_data.values()])
     if indices and indices[0] != 1:
@@ -119,9 +141,6 @@ def main(log_path, output_path):
     log_path = Path(log_path).resolve()
     output_path = Path(output_path).resolve()
     
-    if not output_path.exists():
-        output_path.mkdir(parents=True, exist_ok=True)
-    
     extracted_data = parse_log_file(log_path)
     
     base_filename = log_path.stem
@@ -130,6 +149,19 @@ def main(log_path, output_path):
     with output_file.open('w', encoding='utf-8') as json_file:
         json.dump(extracted_data, json_file, indent=4)
     
+    # Summary print
+    total_items = len(extracted_data) - 1  # Exclude "Error Log"
+    non_series_items = sum(1 for data in extracted_data.values() if "Series" not in data)
+    series_items = total_items - non_series_items
+    series_types = {data["Series"] for data in extracted_data.values() if "Series" in data}
+    
+    print(f"Total extracted items: {total_items}")
+    print(f"Non-series items: {non_series_items}")
+    print(f"Series items: {series_items}")
+    print("Extracted series types:")
+    for series in series_types:
+        print(f" - {series}")
+
     print(f"Extraction complete. Data saved to {output_file}")
 
 if __name__ == "__main__":
