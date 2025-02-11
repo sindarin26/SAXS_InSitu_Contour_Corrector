@@ -55,17 +55,14 @@ def parse_dat_file(dat_path):
     
     return {"q": q_values, "Intensity": intensity_values}, None
 
-def process_dat_files(dat_dir, extracted_data, output_dir):
+def process_dat_files(dat_dir, extracted_data):
     dat_dir = Path(dat_dir).resolve()
-    output_dir = Path(output_dir).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
     error_log = extracted_data.get("Error Log", [])
     dat_files = list(dat_dir.glob("*.dat"))
     processed_series = set()
     
     for dat_file in dat_files:
-        filename = dat_file.stem  # Remove extension
+        filename = dat_file.stem
         if filename not in extracted_data:
             error_log.append(f"[process_dat_files] {dat_file} does not match any log entry. Skipping.")
             continue
@@ -87,22 +84,25 @@ def process_dat_files(dat_dir, extracted_data, output_dir):
                 error_log.append(f"[process_dat_files] {filename} is missing q/Intensity data. Dat file missing for series {data['Series']}.")
     
     extracted_data["Error Log"] = error_log
-    
-    output_file = output_dir / "extracted_dat.json"
-    with output_file.open('w', encoding='utf-8') as json_file:
-        json.dump(extracted_data, json_file, indent=4)
-    
-    return extracted_data, output_file
+    return extracted_data
 
 def main(dat_dir, log_path, output_dir):
     extracted_data = parse_log_file(log_path)
-    extracted_data, output_file = process_dat_files(dat_dir, extracted_data, output_dir)
+    extracted_data = process_dat_files(dat_dir, extracted_data)
     
-    # Summary print
-    total_items = len(extracted_data) - 1  # Exclude "Error Log"
-    non_series_items = sum(1 for data in extracted_data.values() if "Series" not in data)
+    output_dir = Path(output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    log_stem = Path(log_path).resolve().stem
+    output_file = output_dir / f"{log_stem}_extracted_with_dat.json"
+    
+    with output_file.open('w', encoding='utf-8') as json_file:
+        json.dump(extracted_data, json_file, indent=4)
+    
+    total_items = len(extracted_data) - 1
+    non_series_items = sum(1 for data in extracted_data.values() if isinstance(data, dict) and "Series" not in data)
     series_items = total_items - non_series_items
-    series_types = {data["Series"] for data in extracted_data.values() if "Series" in data}
+    series_types = {data["Series"] for data in extracted_data.values() if isinstance(data, dict) and "Series" in data}
     
     print(f"Total extracted items: {total_items}")
     print(f"Non-series items: {non_series_items}")
