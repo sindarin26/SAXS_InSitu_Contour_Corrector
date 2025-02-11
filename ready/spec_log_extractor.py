@@ -1,4 +1,30 @@
-import os
+# The extracted data dictionary will have the following structure:
+# {
+#     "filename1": {
+#         "File Path": "path/to/file",
+#         "Index": 1,
+#         "Exposure Time": 0.1,
+#         "2": 0.0,
+#         "3": 0.0,
+#         "Current": 0.0,
+#         "KeV": 0.0,
+#         "6": 0.0,
+#         "7": 0.0,
+#         "8": 0.0,
+#         "Temperature": 0.0,
+#         "9": 0.0,
+#         "Time": "YYYY-MM-DD HH:MM:SS",
+#         "Elapsed Time": 0
+#     },
+#     "filename2": { ... },
+#     ...
+#     "Error Log": [
+#         "Error message 1",
+#         "Error message 2",
+#         ...
+#     ]
+# }
+
 import re
 import json
 import datetime
