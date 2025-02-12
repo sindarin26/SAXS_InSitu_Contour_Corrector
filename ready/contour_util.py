@@ -2,8 +2,11 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from scipy.optimize import curve_fit  # 가우시안 피팅을 위한 함수
 from spec_log_extractor import parse_log_file
 from dat_extractor import process_dat_files
+
+# 기존 함수들 ---------------------------------------------------------
 
 def select_series(extracted_data):
     """Extract series with q and Intensity, prompt selection if multiple."""
@@ -51,7 +54,6 @@ def extract_contour_data(selected_series, extracted_data):
         raise ValueError("No valid data found for the selected series.")
     
     # 정렬 키가 "Series Elapsed Time"인 경우 (혹은 "Series Index"로 할 수도 있음)
-    # 데이터에 따라 조정하세요.
     series_entries.sort(key=lambda x: x["Series Elapsed Time"])  
     
     times = [entry["Series Elapsed Time"] for entry in series_entries]
@@ -548,6 +550,382 @@ def temp_correction(extracted_data, selected_series, normal_range, adjust_range,
     # series_entries의 수정 내용이 extracted_data 원본 객체들에 반영됨(참조 공유).
     return extracted_data
 
+# ------------------------------------------------------------------------
+# 추가 메서드들 (contour_data를 입력으로 작동)
+# ------------------------------------------------------------------------
+
+def select_q_range(contour_data, index=None):
+    """
+    contour_data의 n번째 데이터에서 q 범위를 선택하도록 사용자에게 입력받는다.
+    플롯은 x축에 q, y축에 Intensity를 사용한다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        extract_contour_data()로 생성된 데이터
+    index : int, optional
+        선택할 데이터의 인덱스 (기본값 0)
+    
+    Returns
+    -------
+    q_range : tuple
+        (q_min, q_max)
+    """
+    if index is None:
+        index = 0
+    try:
+        data_entry = contour_data["Data"][index]
+    except IndexError:
+        raise ValueError(f"Index {index} is out of range for contour_data.")
+    
+    q_vals = data_entry["q"]
+    intensity_vals = data_entry["Intensity"]
+    
+    plt.figure()
+    plt.plot(q_vals, intensity_vals, 'ko-', label='Intensity')
+    plt.xlabel("q")
+    plt.ylabel("Intensity")
+    plt.title("Select q Range by Clicking Two Points (Start, End)")
+    plt.legend()
+    plt.grid(True)
+    
+    pts = plt.ginput(2, timeout=-1)
+    plt.close()
+    if len(pts) < 2:
+        raise RuntimeError("Not enough points were selected.")
+    q_min = min(pts[0][0], pts[1][0])
+    q_max = max(pts[0][0], pts[1][0])
+    return (q_min, q_max)
+
+
+def gaussian(x, a, mu, sigma, offset):
+    """Gaussian 함수: a * exp(-((x-mu)^2)/(2*sigma^2)) + offset"""
+    return a * np.exp(-((x - mu)**2) / (2 * sigma**2)) + offset
+
+
+def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None):
+    """
+    주어진 contour_data의 Index_number 데이터에서, input_range 내의 q, Intensity 데이터를
+    대상으로 가우시안 피팅을 수행하여 peak의 q 위치와 intensity를 구하고,
+    input_range의 중심을 피크 위치로 이동시킨 output_range를 반환한다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        extract_contour_data()로 생성된 데이터
+    Index_number : int, optional
+        분석할 데이터 인덱스 (기본값 0)
+    input_range : tuple
+        (q_min, q_max)의 범위 (반드시 제공)
+    peak_info : dict, optional
+        이전 피크 정보 딕셔너리 (Index가 0보다 큰 경우에 사용)
+        예: {"peak_q": <double>, "peak_intensity": <double>, "q_threshold": None, "intensity_threshold": None}
+    
+    Returns
+    -------
+    (peak_q, peak_intensity, output_range) 또는 조건에 맞지 않으면 None
+    """
+    if input_range is None:
+        raise ValueError("input_range must be provided.")
+    
+    try:
+        data_entry = contour_data["Data"][Index_number]
+    except IndexError:
+        raise ValueError(f"Index {Index_number} is out of range for contour_data.")
+    
+    q_arr = np.array(data_entry["q"])
+    intensity_arr = np.array(data_entry["Intensity"])
+    
+    # input_range 내 데이터 선택
+    mask = (q_arr >= input_range[0]) & (q_arr <= input_range[1])
+    if not np.any(mask):
+        print("No data points found within the specified input_range.")
+        return None
+    q_subset = q_arr[mask]
+    intensity_subset = intensity_arr[mask]
+    
+    # 초기 추정값: amplitude, peak 위치, sigma, offset
+    a_guess = np.max(intensity_subset) - np.min(intensity_subset)
+    mu_guess = q_subset[np.argmax(intensity_subset)]
+    sigma_guess = (input_range[1] - input_range[0]) / 4.0
+    offset_guess = np.min(intensity_subset)
+    p0 = [a_guess, mu_guess, sigma_guess, offset_guess]
+    
+    try:
+        popt, _ = curve_fit(gaussian, q_subset, intensity_subset, p0=p0)
+    except Exception as e:
+        print("Gaussian fit failed:", e)
+        return None
+    
+    peak_q = popt[1]
+    peak_intensity = gaussian(peak_q, *popt)
+    
+    # input_range의 중심을 기준으로 이동 (예: 1~5 범위에서 피크가 4이면, 중심 3 -> shift=+1 → 출력 range 2~6)
+    center = (input_range[0] + input_range[1]) / 2.0
+    shift = peak_q - center
+    output_range = (input_range[0] + shift, input_range[1] + shift)
+    
+    # Index가 0보다 큰 경우 peak_info를 활용하여 임계값 비교
+    if Index_number > 0 and peak_info is not None:
+        # q_threshold 결정
+        if peak_info.get("q_threshold") is None:
+            prev_peak_q = peak_info.get("peak_q")
+            if prev_peak_q is None:
+                print("Previous peak_q is missing in peak_info.")
+            else:
+                peak_info["q_threshold"] = 1 if prev_peak_q >= 3 else 0.1
+        q_threshold = peak_info.get("q_threshold", 0.1)
+        
+        # intensity_threshold (기본 +-50% -> 0.5)
+        if peak_info.get("intensity_threshold") is None:
+            peak_info["intensity_threshold"] = 0.5
+        intensity_threshold = peak_info.get("intensity_threshold", 0.5)
+        
+        prev_peak_q = peak_info.get("peak_q")
+        prev_peak_intensity = peak_info.get("peak_intensity")
+        if prev_peak_q is not None and abs(peak_q - prev_peak_q) > q_threshold:
+            print("Peak q difference exceeds threshold.")
+            return None
+        if prev_peak_intensity is not None and abs(peak_intensity - prev_peak_intensity) > intensity_threshold * prev_peak_intensity:
+            print("Peak intensity difference exceeds threshold.")
+            return None
+    
+    return peak_q, peak_intensity, output_range
+
+
+def adjust_q_range_on_failure(contour_data, peak_data, failure_index):
+    """
+    피크 추적이 failure된 인덱스에서, 지금까지의 peak 데이터와 함께
+    칸투어 플롯을 표시하고, 사용자가 수동으로 q 범위를 재설정하도록 한다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        extract_contour_data()로 생성된 원본 데이터
+    peak_data : dict
+        지금까지 추적된 peak 데이터 (부분 결과)
+    failure_index : int
+        피크 추적 실패가 발생한 인덱스
+    
+    Returns
+    -------
+    new_q_range : tuple
+        사용자가 선택한 새로운 (q_min, q_max) 범위
+    """
+    print(f"Peak tracking failure at index {failure_index}.")
+    print("Displaying contour plot with tracked peaks so far for reference.")
+    plot_contour_with_peaks(contour_data, peak_data)
+    print("Please manually adjust the q range for the current index using the plot.")
+    new_q_range = select_q_range(contour_data, index=failure_index)
+    return new_q_range
+
+
+def track_peaks(contour_data, input_range, tracking_option=None):
+    """
+    contour_data의 각 데이터에 대해 연속적으로 피크를 추적하는 함수.
+    만약 피크 추적에 실패하면, 수동 보정을 위한 창을 띄워 사용자가
+    새로운 q 범위를 선택하게 하고, threshold 비교 없이 재시도한다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        extract_contour_data()로 생성된 데이터
+    input_range : tuple
+        초기 (q_min, q_max) 범위
+    tracking_option : dict, optional
+        추가 옵션 (예: q_threshold, intensity_threshold). 현재 예제에서는 사용하지 않음.
+    
+    Returns
+    -------
+    dict
+        {
+            "Series": <series_name>,
+            "Time-temp": (times, temperatures),
+            "Data": [
+                {"Time": t1, "peak_q": <value>, "peak_Intensity": <value>},
+                {"Time": t2, "peak_q": <value>, "peak_Intensity": <value>},
+                ...
+            ]
+        }
+    
+    Raises
+    ------
+    RuntimeError
+        - 첫 번째 인덱스(0)에서 피크 찾기 실패 시
+        - 수동 보정 후에도 피크 찾기가 실패 시
+    """
+    times_list = []
+    peak_q_list = []
+    peak_intensity_list = []
+
+    prev_peak_info = None
+    n = len(contour_data["Data"])
+    
+    for i in range(n):
+        time_val = contour_data["Data"][i]["Time"]
+        
+        if i == 0:
+            # 첫 번째 인덱스 → peak_info 없음
+            result = find_peak(contour_data, Index_number=0, input_range=input_range, peak_info=None)
+            if result is not None:
+                peak_q, peak_intensity, _ = result
+                # 첫 피크 정보 저장 (threshold 비교 위한 info)
+                prev_peak_info = {"peak_q": peak_q, "peak_intensity": peak_intensity}
+            else:
+                # 첫 번째 인덱스 자체가 실패면 더 진행 불가
+                raise RuntimeError("Peak tracking failed at index 0.")
+        else:
+            # 두 번째 인덱스부터
+            result = find_peak(contour_data, Index_number=i, input_range=input_range, peak_info=prev_peak_info)
+            
+            if result is None:
+                # 지금까지의 결과를 partial_peak_data로 구성 (시각화용)
+                partial_peak_data = {
+                    "Series": contour_data["Series"],
+                    "Time-temp": contour_data["Time-temp"],
+                    "Data": [
+                        {"Time": contour_data["Data"][j]["Time"], 
+                         "peak_q": peak_q_list[j], 
+                         "peak_Intensity": peak_intensity_list[j]}
+                        for j in range(i)
+                    ]
+                }
+                
+                # 실패 시, 수동으로 q 범위 재설정을 요청
+                new_input_range = adjust_q_range_on_failure(
+                    contour_data=contour_data,
+                    peak_data=partial_peak_data,
+                    failure_index=i
+                )
+                
+                # "직전 피크와의 threshold 비교"를 건너뛰기 위해 peak_info=None으로 재시도
+                result = find_peak(
+                    contour_data, 
+                    Index_number=i, 
+                    input_range=new_input_range, 
+                    peak_info=None   # 여기서 threshold 비교 무시
+                )
+                
+                if result is None:
+                    raise RuntimeError(f"Peak tracking failed at index {i} even after manual adjustment.")
+                else:
+                    # 성공하면 새 범위를 이후에도 사용
+                    input_range = new_input_range
+                    # 이번에 찾은 피크를 새 기준으로 저장
+                    peak_q, peak_intensity, _ = result
+                    prev_peak_info = {"peak_q": peak_q, "peak_intensity": peak_intensity}
+            else:
+                # 정상적으로 찾았으면 그대로 업데이트
+                peak_q, peak_intensity, _ = result
+                # threshold 체크에 성공했으므로, prev_peak_info 갱신
+                prev_peak_info = {
+                    "peak_q": peak_q, 
+                    "peak_intensity": peak_intensity,
+                    "q_threshold": prev_peak_info.get("q_threshold"),
+                    "intensity_threshold": prev_peak_info.get("intensity_threshold")
+                }
+
+        # i번째 결과 저장
+        times_list.append(time_val)
+        peak_q_list.append(peak_q)
+        peak_intensity_list.append(peak_intensity)
+    
+    # 모든 인덱스에 대해 피크 추적 완료
+    new_contour = {
+        "Series": contour_data["Series"],
+        "Time-temp": contour_data["Time-temp"],
+        "Data": [
+            {"Time": t, "peak_q": pq, "peak_Intensity": pi}
+            for t, pq, pi in zip(times_list, peak_q_list, peak_intensity_list)
+        ]
+    }
+    return new_contour
+
+def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
+    """
+    contour_data를 기반으로 칸투어 플롯을 그리고, 그 위에 peak_data에 기록된
+    피크 위치들을 빨간 원(marker)으로 오버레이하여 표시한다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        extract_contour_data()로 생성된 데이터
+    peak_data : dict
+        track_peaks()의 결과 데이터 (각 시간별 peak_q와 peak_Intensity 포함)
+    graph_option : dict, optional
+        사용자 지정 그래프 옵션 (없으면 기본값 사용)
+    """
+    # 기본 옵션 (plot_contour와 유사한 옵션 사용)
+    default_graph_option = {
+        "figure_size": (12, 8),
+        "figure_dpi": 300,
+        "contour_levels": 100,
+        "contour_cmap": "inferno",
+        "contour_lower_percentile": 0.1,
+        "contour_upper_percentile": 98,
+        "contour_xlabel_text": "2theta (Cu K-alpha)",
+        "contour_ylabel_text": "Elapsed Time",
+        "global_ylim": None,
+        "contour_xlim": None,
+    }
+    if graph_option is None:
+        graph_option = {}
+    final_opt = {**default_graph_option, **graph_option}
+    
+    times, _ = contour_data["Time-temp"]
+    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
+    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
+    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    
+    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
+    time_common = np.unique(time_all)
+    
+    grid_q, grid_time = np.meshgrid(q_common, time_common)
+    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
+    if grid_intensity is None or np.isnan(grid_intensity).all():
+        print("Warning: All interpolated intensity values are NaN. Check input data.")
+        return
+    
+    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
+    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
+    
+    fig, ax = plt.subplots(figsize=final_opt["figure_size"], dpi=final_opt["figure_dpi"])
+    cp = ax.contourf(
+        grid_q,
+        grid_time,
+        grid_intensity,
+        levels=final_opt["contour_levels"],
+        cmap=final_opt["contour_cmap"],
+        vmin=lower_bound,
+        vmax=upper_bound
+    )
+    
+    if final_opt["contour_xlim"] is not None:
+        ax.set_xlim(final_opt["contour_xlim"])
+    if final_opt["global_ylim"] is not None:
+        ax.set_ylim(final_opt["global_ylim"])
+    
+    ax.set_xlabel(final_opt["contour_xlabel_text"], fontsize=14, fontweight='bold')
+    ax.set_ylabel(final_opt["contour_ylabel_text"], fontsize=14, fontweight='bold')
+    ax.set_title("Contour Plot with Peak Positions", fontsize=16, fontweight='bold')
+    ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+    
+    # peak_data의 각 데이터에 대해, peak_q와 해당 시간을 빨간 원으로 표시
+    added_label = False
+    for entry in peak_data["Data"]:
+        peak_q = entry.get("peak_q")
+        time_val = entry.get("Time")
+        # 유효한 값인 경우만 표시
+        if peak_q is not None and not np.isnan(peak_q):
+            # marker 크기를 충분히 크게 설정 (예: s=100)
+            if not added_label:
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, label="Peak Position", zorder=10)
+                added_label = True
+            else:
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, zorder=10)
+    
+    ax.legend()
+    plt.show()
 
 # ------------------------------------------------------------------------
 # MAIN
@@ -571,7 +949,7 @@ def main(dat_dir, log_path, output_dir):
     for entry in extracted_data.values():
         if isinstance(entry, dict) and "q" in entry and "Intensity" in entry:
             if len(entry["q"]) == 0 or len(entry["Intensity"]) == 0:
-                print(f"Warning: Missing data detected in {entry['File Path']}")
+                print(f"Warning: Missing data detected in {entry.get('File Path', 'Unknown File')}")
     
     # 실제 contour_data 생성
     contour_data = extract_contour_data(selected_series, extracted_data)
@@ -580,8 +958,28 @@ def main(dat_dir, log_path, output_dir):
         if len(entry["q"]) == 0 or len(entry["Intensity"]) == 0:
             print(f"Warning: Missing data detected in time frame {entry['Time']}")
     
-    # 최종 플롯
+    # 최종 플롯 (온도 subplot 포함)
     plot_contour(contour_data, temp=True, legend=True)
+    
+    # ===== 추가 메서드 호출 예시 =====
+    # 1. contour_data의 첫번째 데이터에서 q 범위 선택
+    q_range = select_q_range(contour_data)  # index 기본값 0
+    print("Selected q range:", q_range)
+    
+    # 2. 첫번째 데이터에서 피크 찾기 (Index_number=0일 땐 peak_info 사용하지 않음)
+    peak_result = find_peak(contour_data, Index_number=0, input_range=q_range)
+    if peak_result is not None:
+        peak_q, peak_intensity, output_range = peak_result
+        print(f"First dataset peak: q = {peak_q}, intensity = {peak_intensity}, adjusted range = {output_range}")
+    else:
+        print("Peak not found in first dataset.")
+    
+    # 3. 모든 데이터에 대해 피크 추적 (연속 추적)
+    tracked_peaks = track_peaks(contour_data, input_range=q_range)
+    #print("Tracked peaks:", tracked_peaks)
+    
+    # 4. contour 플롯에 피크 위치 오버레이하여 확인 (빨간 원 표시)
+    plot_contour_with_peaks(contour_data, tracked_peaks)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
