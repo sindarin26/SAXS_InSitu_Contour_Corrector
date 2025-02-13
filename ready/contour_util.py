@@ -571,6 +571,111 @@ def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
 # ============================================================
 # [New Functionality] - (C) SDD recalculation based on peak fitting and tracked_peaks update
 # ============================================================
+def q_to_2theta(q, energy_keV):
+    """
+    q 값을 2θ 값(degree)으로 변환하는 함수.
+
+    Parameters:
+        q (float or array): q 값 (Å^-1)
+        energy_keV (float): X-ray 에너지 (keV)
+
+    Returns:
+        float or array: 변환된 2θ 값 (degree)
+    """
+    # X-ray 파장 계산 (Å)
+    wavelength = 12.398 / energy_keV  # λ = 12.398 / E
+
+    # 2θ 계산
+    theta_rad = np.arcsin((q * wavelength) / (4 * np.pi))  # 라디안 단위
+    theta_deg = np.degrees(2 * theta_rad)  # 도(degree) 단위 변환
+
+    return theta_deg
+
+def theta_to_q(theta_2, energy_keV):
+    """
+    2θ 값을 q 값(Å^-1)으로 변환하는 함수.
+
+    Parameters:
+        theta_2 (float or array): 2θ 값 (degree)
+        energy_keV (float): X-ray 에너지 (keV)
+
+    Returns:
+        float or array: 변환된 q 값 (Å^-1)
+    """
+    # X-ray 파장 계산 (Å)
+    wavelength = 12.398 / energy_keV  # λ = 12.398 / E
+
+    # θ 계산 (라디안 변환)
+    theta_rad = np.radians(theta_2 / 2)  # θ = 2θ / 2
+
+    # q 계산
+    q_value = (4 * np.pi / wavelength) * np.sin(theta_rad)
+
+    return q_value
+
+def max_SDD_calculation(theta_2_max, pixel_size, beam_center_x, beam_center_y, image_size):
+    """
+    최대 SDD 값을 계산하는 함수 (MATLAB 좌표 기준).
+
+    Parameters:
+        theta_2_max (float): 최대 2θ 값 (degree)
+        pixel_size (float): 픽셀 크기 (mm)
+        beam_center_x (float): 빔 센터 x 좌표 (MATLAB 기준)
+        beam_center_y (float): 빔 센터 y 좌표 (MATLAB 기준)
+        image_size (tuple): 이미지 크기 (width, height)
+
+    Returns:
+        float: 최대 SDD 값 (mm)
+    """
+    
+    # 최대 2θ에서 θ 계산 (라디안 변환)
+    theta_max_rad = np.radians(theta_2_max)
+
+    # MATLAB 기준 좌표 사용 (1-based indexing)
+    corners = [(1, 1), (1, image_size[1]), (image_size[0], 1), (image_size[0], image_size[1])]
+    
+    # 빔 센터에서 가장 먼 거리 계산
+    R_pixel_max = max(np.sqrt((corner_x - beam_center_x) ** 2 + (corner_y - beam_center_y) ** 2) for corner_x, corner_y in corners)
+
+    corrected_R_pixe_max = round(R_pixel_max, 0) - 1    
+    
+    # 픽셀 거리 (mm 단위)
+    R_mm_max = corrected_R_pixe_max * pixel_size
+
+    # SDD 계산
+    SDD_max = R_mm_max / np.tan(theta_max_rad)
+
+    return SDD_max
+
+def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, original_SDD):
+    """
+    fit_params를 사용하여 corrected_peak_q 값을 계산하고 tracked_peaks에 추가
+
+    Parameters:
+        tracked_peaks (dict): tracked_peaks 데이터
+        fit_params (tuple): (a, b) - 피팅 파라미터
+        peak_fit_temp_range (tuple): (temp_min, temp_max) - 피팅에 사용된 온도 범위
+
+    Returns:
+        dict: corrected_peak_q가 추가된 tracked_peaks
+    """
+    a, b = fit_params
+    temp_max = peak_fit_temp_range[1]
+    
+    for entry in tracked_peaks["Data"]:
+        T = entry["Temperature"]
+        entry["original_SDD"] = original_SDD
+        if T > temp_max:  # 피팅 온도 범위 이후의 데이터에 대해서만
+            corrected_q = a * T + b  # 피팅 결과로 계산된 q 값
+            entry["corrected_peak_q"] = corrected_q
+            entry["SDD"] = None
+        else:
+            entry["corrected_peak_q"] = None
+            entry["SDD"] = original_SDD
+            
+    return tracked_peaks
+
+
 def calculate_sdd_for_tracked_peaks(tracked_peaks, fit_params, fit_index_range, original_sdd, beam_center_x, beam_center_y, pixel_size):
     """
     For each tracked peak, calculate the predicted 2theta using the linear fit:
@@ -669,6 +774,31 @@ def export_tracked_peaks_to_excel(tracked_peaks, filename="tracked_peaks.csv"):
     df.to_csv(filename, index=False)
     print(f"Tracked peaks exported to {filename}")
 
+def export_tracked_peaks_to_excel_with_correction(tracked_peaks, filename="tracked_peaks_with_correction.csv"):
+    """
+    Export tracked peaks data including corrected_peak_q to a CSV file.
+    
+    Parameters:
+        tracked_peaks (dict): tracked_peaks 데이터
+        filename (str): 저장할 파일 이름
+    """
+    rows = []
+    for entry in tracked_peaks["Data"]:
+        row = {
+            "Time": entry.get("Time"),
+            "Temperature": entry.get("Temperature"),
+            "peak_q": entry.get("peak_q"),
+            "peak_Intensity": entry.get("peak_Intensity"),
+            "corrected_peak_q": entry.get("corrected_peak_q"),
+            "SDD": entry.get("SDD"),
+            "original_SDD": entry.get("original_SDD")
+        }
+        rows.append(row)
+    
+    df = pd.DataFrame(rows)
+    df.to_csv(filename, index=False)
+    print(f"Tracked peaks exported to {filename}")
+
 
 # ============================================================
 # [New Functionality] - Temperature-Peak Fitting Functions
@@ -736,7 +866,7 @@ def fit_peak_vs_temp(tracked_peaks, fit_temp_range):
 # ============================================================
 # MAIN
 # ============================================================
-def main(dat_dir, log_path, output_dir, original_sdd, beam_center_x, beam_center_y, pixel_size, wavelength=1.5406):
+def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, experiment_energy, converted_energy, q_format):
     log_data = parse_log_file(log_path)
     extracted_data = process_dat_files(dat_dir, log_data)
     selected_series = select_series(extracted_data)
@@ -751,28 +881,48 @@ def main(dat_dir, log_path, output_dir, original_sdd, beam_center_x, beam_center
         if len(entry["q"]) == 0 or len(entry["Intensity"]) == 0:
             print(f"Warning: Missing data detected in time frame {entry['Time']}")
     plot_contour(contour_data, temp=True, legend=True)
+
+
     q_range = select_q_range(contour_data)
     print("Selected q range:", q_range)
+
     peak_result = find_peak(contour_data, Index_number=0, input_range=q_range)
     if peak_result is not None:
         peak_q, peak_intensity, output_range = peak_result
         print(f"First dataset peak: q = {peak_q}, intensity = {peak_intensity}, adjusted range = {output_range}")
     else:
         print("Peak not found in first dataset.")
+
     tracked_peaks = track_peaks(contour_data, input_range=q_range)
+
     plot_contour_with_peaks(contour_data, tracked_peaks)
+
     index_range = select_index_range_for_temp_fitting(tracked_peaks)
     print("Selected index range for temperature fitting:", index_range)
+
     peak_fit_temp_range = select_peak_fit_range(tracked_peaks, index_range)
     print("Selected temperature range for peak fitting:", peak_fit_temp_range)
+
     fit_params = fit_peak_vs_temp(tracked_peaks, peak_fit_temp_range)
     print("Fitted parameters (a, b):", fit_params)
-    tracked_peaks = calculate_sdd_for_tracked_peaks(tracked_peaks, fit_params, index_range, 
-                                                  original_sdd, beam_center_x, beam_center_y, pixel_size)
-    export_tracked_peaks_to_excel(tracked_peaks, filename="tracked_peaks.csv")
-    corrected_contour_data = recalc_q_values(contour_data, tracked_peaks, original_sdd, 
-                                           beam_center_x, beam_center_y, pixel_size)
-    plot_contour(corrected_contour_data, temp=True, legend=True)
+
+    # 새로운 함수 호출
+    tracked_peaks = add_corrected_peak_q(tracked_peaks, fit_params, index_range, original_sdd)
+    
+    # 결과 확인을 위한 export
+    export_tracked_peaks_to_excel_with_correction(tracked_peaks, "tracked_peaks_with_correction.csv")
+
+
+    # tracked_peaks = calculate_sdd_for_tracked_peaks(tracked_peaks, fit_params, index_range, 
+    #                                               original_sdd, beam_center[0], beam_center[1], pixel_size)
+    
+
+    #export_tracked_peaks_to_excel(tracked_peaks, filename="tracked_peaks.csv")
+    
+    # corrected_contour_data = recalc_q_values(contour_data, tracked_peaks, original_sdd, 
+    #                                        beam_center_x, beam_center_y, pixel_size)
+    
+    # plot_contour(corrected_contour_data, temp=True, legend=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
@@ -787,15 +937,25 @@ if __name__ == "__main__":
                         help="Directory to save the extracted JSON file")
     parser.add_argument("--orig_sdd", type=float, default=227.7524,
                         help="Original SDD in mm")
-    parser.add_argument("--beam_center_x", type=float, default=954.1370,
-                        help="Beam center X position in pixels (Python coords)")
-    parser.add_argument("--beam_center_y", type=float, default=632.0930,
-                        help="Beam center Y position in pixels (Python coords)")
+    parser.add_argument("--beam_center_x", type=float, default=955.1370,
+                        help="Beam center X position in pixels (Matlab coords, which is 1+based)")
+    parser.add_argument("--beam_center_y", type=float, default=633.0930,
+                        help="Beam center Y position in pixels (Matlab coords, which is 1+based)")
     parser.add_argument("--pixel_size", type=float, default=0.0886,
                         help="Pixel size in mm")
-    parser.add_argument("--wavelength", type=float, default=1.5406,
-                        help="X-ray wavelength in Angstroms")
+    parser.add_argument("--experiment_energy", type=float, default=19.78,
+                        help="X-ray energy in keV")
+    parser.add_argument("--converted_energy", type=float, default=8.042,
+                        help="Converted X-ray energy in keV, Default: 8.042 keV; Cu K-alpha")
+    parser.add_argument("--image_size_x", type=int, default=1920,
+                        help="Image size in X direction")
+    parser.add_argument("--image_size_y", type=int, default=1920,
+                        help="Image size in Y direction")
+    parser.add_argument("--q_format", type=str, default='CuKalpha',
+                        help="q_format, Default: 'CuKalpha', Options: 'q', 'CuKalpha'")
     args = parser.parse_args()
-    
-    main(args.input, args.log, args.output, args.orig_sdd, 
-         args.beam_center_x, args.beam_center_y, args.pixel_size, args.wavelength)
+
+    image_size = (args.image_size_x, args.image_size_y)
+    beam_center = (args.beam_center_x, args.beam_center_y)
+
+    main(args.input, args.log, args.orig_sdd, image_size, beam_center, args.pixel_size, args.experiment_energy, args.converted_energy, args.q_format)
