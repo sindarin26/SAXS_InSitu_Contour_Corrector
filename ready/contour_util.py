@@ -6,6 +6,7 @@ from scipy.optimize import curve_fit  # 가우시안 피팅용
 import pandas as pd  # CSV (엑셀) 출력용
 from spec_log_extractor import parse_log_file
 from dat_extractor import process_dat_files
+import time
 
 # ============================================================
 # 기존 함수들: 시리즈 선택, 데이터 추출, 플롯 등
@@ -84,7 +85,7 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
         "contour_ylabel_text": "Elapsed Time",
         "contour_title_enable": True,
         "contour_title_text": "Contour Plot",
-        "contour_xlim": None,
+        "contour_xlim": [30, 60],
         "contour_grid": False,
         "temp_xlabel_enable": True,
         "temp_xlabel_text": "Temperature",
@@ -348,7 +349,26 @@ def temp_correction(extracted_data, selected_series, normal_range, adjust_range,
 # ============================================================
 def select_q_range(contour_data, index=None):
     """
-    contour_data의 n번째 데이터에서 q 범위를 선택 (ginput 사용).
+    Matplotlib을 사용한 대화형 q 범위 선택 함수입니다.
+    
+    이 함수는 다음과 같은 대화형 기능을 제공합니다:
+    - 그래프 영역에서의 휠: 마우스 포인트를 중심으로 양방향 확대/축소
+    - 축 주변에서의 휠: 해당 축만 확대/축소
+    - 왼쪽 클릭: 범위 지점 선택
+    - 오른쪽 클릭: 선택 초기화
+    - Enter: 선택 확정
+    
+    Parameters
+    ----------
+    contour_data : dict
+        데이터 딕셔너리
+    index : int, optional
+        분석할 데이터의 인덱스 (기본값: 0)
+        
+    Returns
+    -------
+    tuple
+        선택된 q 범위 (q_min, q_max)
     """
     if index is None:
         index = 0
@@ -356,21 +376,163 @@ def select_q_range(contour_data, index=None):
         data_entry = contour_data["Data"][index]
     except IndexError:
         raise ValueError(f"Index {index} is out of range for contour_data.")
-    q_vals = data_entry["q"]
-    intensity_vals = data_entry["Intensity"]
-    plt.figure()
-    plt.plot(q_vals, intensity_vals, 'ko-', label='Intensity')
-    plt.xlabel("q")
-    plt.ylabel("Intensity")
-    plt.title("Select q Range by Clicking Two Points (Start, End)")
-    plt.legend()
-    plt.grid(True)
-    pts = plt.ginput(2, timeout=-1)
-    plt.close()
-    if len(pts) < 2:
-        raise RuntimeError("Not enough points were selected.")
-    q_min = min(pts[0][0], pts[1][0])
-    q_max = max(pts[0][0], pts[1][0])
+    
+    q_vals = np.array(data_entry["q"])
+    intensity_vals = np.array(data_entry["Intensity"])
+    
+    # 그래프 설정
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plt.subplots_adjust(bottom=0.2, left=0.12)
+    
+    # 기본 플롯
+    line, = ax.plot(q_vals, intensity_vals, 'ko-', label='Intensity', zorder=1)
+    ax.set_xlabel("q")
+    ax.set_ylabel("Intensity")
+    ax.set_title("Select q Range\nUse mouse wheel on axes or plot area to zoom")
+    ax.grid(True, linestyle='--', alpha=0.7, zorder=0)
+    ax.legend()
+    
+    # 상태 추적용 변수들
+    selected_points = []
+    selection_plots = []
+    last_wheel_time = [0]  # 리스트로 만들어 참조로 전달
+    wheel_center = [None, None]  # [x, y] 좌표
+    WHEEL_TIMEOUT = 0.1  # 100ms timeout
+
+    # 상태 메시지 표시용 텍스트
+    status_text = ax.text(0.5, -0.2, "", 
+                         transform=ax.transAxes,
+                         horizontalalignment='center',
+                         bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
+    
+    def update_status(message):
+        """상태 메시지 업데이트"""
+        status_text.set_text(message)
+        plt.draw()
+    
+    def get_axis_from_position(event):
+        """이벤트 위치에 따른 축 판별"""
+        bbox = ax.get_position()
+        margin = 0.05
+        
+        # 그래프 영역 밖에서의 위치 판별
+        if event.inaxes != ax:
+            fig_coord_x = event.x / fig.get_figwidth()
+            fig_coord_y = event.y / fig.get_figheight()
+            
+            # x축 영역 (아래 또는 위)
+            if bbox.x0 <= fig_coord_x <= bbox.x1:
+                if abs(fig_coord_y - bbox.y0) <= margin:
+                    return 'x'
+            
+            # y축 영역 (왼쪽 또는 오른쪽)
+            if bbox.y0 <= fig_coord_y <= bbox.y1:
+                if abs(fig_coord_x - bbox.x0) <= margin:
+                    return 'y'
+            
+            return None
+        
+        return 'both'
+    
+    def on_scroll(event):
+        """휠 스크롤 이벤트 처리"""
+        current_time = time.time()
+        axis_type = get_axis_from_position(event)
+        
+        if axis_type is None:
+            return
+            
+        # 휠 타이밍 체크 및 중심점 업데이트
+        if current_time - last_wheel_time[0] > WHEEL_TIMEOUT:
+            wheel_center[0] = event.xdata
+            wheel_center[1] = event.ydata
+        last_wheel_time[0] = current_time
+        
+        # 줌 비율 설정
+        base_scale = 1.1
+        scale_factor = 1.0 / base_scale if event.button == 'up' else base_scale
+        
+        # 현재 축 범위
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        
+        # 중심점 설정
+        center_x = wheel_center[0] if wheel_center[0] is not None else event.xdata
+        center_y = wheel_center[1] if wheel_center[1] is not None else event.ydata
+        
+        # 축별 줌 적용
+        if axis_type in ['both', 'x'] and center_x is not None:
+            ax.set_xlim([
+                center_x - (center_x - xmin) * scale_factor,
+                center_x + (xmax - center_x) * scale_factor
+            ])
+                
+        if axis_type in ['both', 'y'] and center_y is not None:
+            ax.set_ylim([
+                center_y - (center_y - ymin) * scale_factor,
+                center_y + (ymax - center_y) * scale_factor
+            ])
+        
+        plt.draw()
+    
+    def on_click(event):
+        """마우스 클릭 이벤트 처리"""
+        if event.inaxes != ax:
+            return
+        
+        if event.button == 1:  # 왼쪽 클릭
+            if len(selected_points) >= 2:
+                update_status("Already selected 2 points. Right click to reset.")
+                return
+            
+            selected_points.append(event.xdata)
+            line = ax.axvline(x=event.xdata, color='r', linestyle='--', alpha=0.7)
+            selection_plots.append(line)
+            
+            if len(selected_points) == 2:
+                update_status("Press Enter to confirm, right click to reset")
+            else:
+                update_status(f"Selected point at q = {event.xdata:.3f}. Select one more point.")
+            plt.draw()
+            
+        elif event.button == 3:  # 오른쪽 클릭
+            selected_points.clear()
+            for line in selection_plots:
+                line.remove()
+            selection_plots.clear()
+            update_status("Selection reset. Select two points.")
+            plt.draw()
+    
+    def on_key(event):
+        """키보드 이벤트 처리"""
+        if event.key == 'enter':
+            if len(selected_points) == 2:
+                plt.close()
+            else:
+                update_status("Please select two points before confirming.")
+    
+    # 이벤트 핸들러 연결
+    fig.canvas.mpl_connect('button_press_event', on_click)
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+    fig.canvas.mpl_connect('key_press_event', on_key)
+    
+    update_status("Select two points using left click. Use mouse wheel to zoom.")
+    plt.show()
+    
+    # 선택 검증
+    if len(selected_points) != 2:
+        raise RuntimeError("Selection was not completed properly.")
+    
+    q_min = min(selected_points)
+    q_max = max(selected_points)
+    
+    # 선택 범위 검증
+    if q_max - q_min < 0.1:
+        raise ValueError("Selected range is too narrow (< 0.1). Please select a wider range.")
+    
+    if q_min < min(q_vals) or q_max > max(q_vals):
+        raise ValueError("Selected range is outside the data range.")
+    
     return (q_min, q_max)
 
 def gaussian(x, a, mu, sigma, offset):
@@ -567,7 +729,166 @@ def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
                 ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, zorder=10)
     ax.legend()
     plt.show()
-
+def interactive_peak_adjustment(contour_data, tracked_peaks, original_sdd, experiment_energy, converted_energy=8.042):
+    """
+    대화형으로 피크를 재조정하는 함수입니다. contour plot에서 피크를 클릭하면
+    해당 시점의 데이터에 대해 q 범위를 다시 선택하고 피크를 재계산합니다.
+    
+    마우스 조작:
+    - 휠: 줌 인/아웃
+    - 왼쪽 클릭: 피크 선택
+    - 오른쪽 클릭: 선택 취소
+    - Enter: 선택 확정
+    """
+    times, temperatures = contour_data["Time-temp"]
+    
+    # 컨투어 플롯 데이터 준비
+    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
+    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
+    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    
+    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
+    time_common = np.unique(time_all)
+    grid_q, grid_time = np.meshgrid(q_common, time_common)
+    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
+    
+    # 그래프 설정
+    fig, ax = plt.subplots(figsize=(12, 8))
+    plt.subplots_adjust(bottom=0.2)  # 상태 메시지를 위한 여백
+    
+    # 컨투어 플롯
+    cp = ax.contourf(grid_q, grid_time, grid_intensity, levels=100, cmap='inferno')
+    fig.colorbar(cp, ax=ax, label='log10(Intensity)')
+    
+    # 피크 포인트 플롯
+    peak_points = []
+    for entry in tracked_peaks["Data"]:
+        point = ax.scatter(entry["peak_q"], entry["Time"], 
+                         color="red", edgecolors="black", s=100, zorder=10)
+        peak_points.append(point)
+    
+    ax.set_xlabel("q")
+    ax.set_ylabel("Time")
+    ax.set_title("Click on a peak to readjust - Use mouse wheel to zoom")
+    
+    # 상태 메시지 표시용 텍스트 박스
+    status_text = ax.text(0.5, -0.15, "", 
+                         transform=ax.transAxes,
+                         horizontalalignment='center',
+                         bbox=dict(facecolor='white', alpha=0.8))
+    
+    def update_status(message):
+        status_text.set_text(message)
+        plt.draw()
+    
+    def find_nearest_peak(click_x, click_y):
+        min_dist = float('inf')
+        nearest_idx = None
+        
+        for i, entry in enumerate(tracked_peaks["Data"]):
+            peak_x = entry["peak_q"]
+            peak_y = entry["Time"]
+            
+            # 정규화된 거리 계산 (x와 y의 스케일이 다르므로)
+            x_range = max(q_all) - min(q_all)
+            y_range = max(times) - min(times)
+            dx = (click_x - peak_x) / x_range
+            dy = (click_y - peak_y) / y_range
+            dist = np.sqrt(dx**2 + dy**2)
+            
+            if dist < min_dist:
+                min_dist = dist
+                nearest_idx = i
+        
+        # 너무 멀리 있는 점은 무시 (임계값: 0.1)
+        return nearest_idx if min_dist < 0.1 else None
+    
+    def on_click(event):
+        if event.inaxes != ax:
+            return
+            
+        if event.button == 1:  # 왼쪽 클릭
+            idx = find_nearest_peak(event.xdata, event.ydata)
+            if idx is not None:
+                update_status(f"Selected peak at index {idx}. Adjusting q range...")
+                plt.draw()
+                
+                # 현재 창 숨기기
+                fig.canvas.draw_idle()
+                plt.close()
+                
+                # q 범위 재선택
+                try:
+                    new_q_range = select_q_range(contour_data, index=idx)
+                    result = find_peak(contour_data, Index_number=idx, 
+                                     input_range=new_q_range, peak_info=None)
+                    
+                    if result is not None:
+                        peak_q, peak_intensity, _ = result
+                        tracked_peaks["Data"][idx]["peak_q"] = peak_q
+                        tracked_peaks["Data"][idx]["peak_Intensity"] = peak_intensity
+                        
+                        # SDD 재계산이 필요한 경우
+                        if tracked_peaks["Data"][idx].get("corrected_SDD") is not None:
+                            new_sdd = calculate_corrected_sdd(
+                                peak_q, original_sdd,
+                                tracked_peaks["Data"][idx]["corrected_peak_q"],
+                                experiment_energy, converted_energy
+                            )
+                            tracked_peaks["Data"][idx]["corrected_SDD"] = new_sdd
+                        
+                        print(f"Peak updated: q = {peak_q:.4f}, intensity = {peak_intensity:.4f}")
+                        
+                        # 업데이트된 결과로 다시 플롯
+                        interactive_peak_adjustment(contour_data, tracked_peaks, 
+                                                 original_sdd, experiment_energy, 
+                                                 converted_energy)
+                    else:
+                        print("Failed to find peak in the selected range")
+                        interactive_peak_adjustment(contour_data, tracked_peaks, 
+                                                 original_sdd, experiment_energy, 
+                                                 converted_energy)
+                except Exception as e:
+                    print(f"Error during peak adjustment: {e}")
+                    interactive_peak_adjustment(contour_data, tracked_peaks, 
+                                             original_sdd, experiment_energy, 
+                                             converted_energy)
+            else:
+                update_status("No peak found near click position")
+    
+    def on_scroll(event):
+        if event.inaxes != ax:
+            return
+        
+        # 현재 축 범위
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        
+        # 줌 비율
+        if event.button == 'up':
+            scale_factor = 0.9
+        else:
+            scale_factor = 1.1
+        
+        # 마우스 위치 기준으로 줌
+        center_x = event.xdata
+        center_y = event.ydata
+        
+        new_width = (xmax - xmin) * scale_factor
+        new_height = (ymax - ymin) * scale_factor
+        
+        ax.set_xlim([center_x - new_width/2, center_x + new_width/2])
+        ax.set_ylim([center_y - new_height/2, center_y + new_height/2])
+        plt.draw()
+    
+    # 이벤트 핸들러 연결
+    fig.canvas.mpl_connect('button_press_event', on_click)
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+    
+    update_status("Click on a peak to readjust its position. Use mouse wheel to zoom.")
+    plt.show()
+    
+    return tracked_peaks
 # ============================================================
 # [New Functionality] - (C) SDD recalculation based on peak fitting and tracked_peaks update
 # ============================================================
@@ -927,7 +1248,7 @@ def export_tracked_peaks_to_excel_with_correction(tracked_peaks, filename="track
             "peak_q": entry.get("peak_q"),
             "peak_Intensity": entry.get("peak_Intensity"),
             "corrected_peak_q": entry.get("corrected_peak_q"),
-            "SDD": entry.get("SDD"),
+            "corrected_SDD": entry.get("corrected_SDD"),
             "original_SDD": entry.get("original_SDD")
         }
         rows.append(row)
@@ -1033,6 +1354,20 @@ def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, e
     tracked_peaks = track_peaks(contour_data, input_range=q_range)
 
     plot_contour_with_peaks(contour_data, tracked_peaks)
+
+
+    while True:
+        tracked_peaks = interactive_peak_adjustment(contour_data, tracked_peaks, 
+                                             original_sdd, experiment_energy, 
+                                             converted_energy)
+        proceed = input("Do you want to proceed with the adjusted peaks? (y/n): ").strip().lower()
+        if proceed == 'y':
+            break
+        elif proceed == 'n':
+            print("Readjusting peaks...")
+        else:
+            print("Invalid input. Please enter 'y' or 'n'.")
+
 
     index_range = select_index_range_for_temp_fitting(tracked_peaks)
     print("Selected index range for temperature fitting:", index_range)
