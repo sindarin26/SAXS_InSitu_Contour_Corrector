@@ -80,6 +80,70 @@ def calculate_corrected_sdd(original_2theta, original_sdd, corrected_2theta, exp
     
     return corrected_sdd
 
+def recalc_q_list(
+    q_list,        # 원래 q 리스트 (여기서는 CuKα 기준이라고 가정)
+    original_sdd,  # 원래 사용된 SDD (mm), 예: 227.7524
+    corrected_sdd, # 새로 보정된 SDD (mm)
+    energy_keV,     # 실제 X-ray 에너지(keV), q_list를 해석할 때 사용할 에너지
+    converted_energy=8.042  # q_list를 해석할 때 사용할 에너지, None이면 변환 없음
+):
+    """
+    원래 q_list(에너지는 'energy_keV'라고 가정)와 
+    original_sdd 조건에서 측정된 데이터를, 
+    corrected_sdd로 바뀌었을 때의 q_list를 재계산하여 반환.
+
+    절차:
+      1) q_list -> 2θ (energy_keV 기반)
+      2) R = original_sdd * tan(2θ)
+      3) corrected_2θ = arctan(R / corrected_sdd)
+      4) corrected_q_list = theta_to_q(corrected_2θ, energy_keV)
+
+    Parameters
+    ----------
+    q_list : array-like
+        원래 q 리스트
+    original_sdd : float
+        원래 사용된 SDD(mm)
+    corrected_sdd : float
+        새로 보정된 SDD(mm)
+    energy_keV : float
+        q_list를 해석할 때 사용할 X-ray 에너지(keV)
+
+    Returns
+    -------
+    corrected_q_list : ndarray
+        corrected_sdd에서의 새로운 q 리스트
+    """
+
+    if converted_energy is None:
+        q_list = q_list
+    else:
+        # q_list를 energy_keV 에너지에서의 2θ로 변환
+        q_list = theta_to_q(q_list, converted_energy)
+
+    # 1) q_list -> 2θ (degree)
+    exp_2theta = q_to_2theta(q_list, energy_keV)
+
+    # 2) 방사거리 R = original_sdd * tan(2θ)
+    #    여기서 2θ는 degree이므로, np.tan() 사용 전 radians 변환
+    R = original_sdd * np.tan(np.radians(exp_2theta))
+    
+    # 3) 같은 R에서, 새 SDD(corrected_sdd)를 이용해 다시 θ 계산
+    #    θ = arctan(R / newSDD), 단 여기서 θ = 2θ이므로 '2θ' 자체를 구함
+    corrected_2theta = np.degrees(np.arctan(R / corrected_sdd))
+    
+    # 4) 새 2θ -> q
+    corrected_q_list = theta_to_q(corrected_2theta, energy_keV)
+
+    if converted_energy is None:
+        corrected_q_list = corrected_q_list
+    else:
+        # q_list를 energy_keV 에너지에서의 2θ로 변환
+        corrected_q_list = q_to_2theta(corrected_q_list, converted_energy)
+    
+    return corrected_q_list
+
+
 def main():
     # 상수 정의
     ENERGY_CUKA = 8.042  # keV (Cu Kα)
@@ -138,6 +202,19 @@ def main():
     print(f"Corrected 2θ: {corrected_2theta}°")
     print(f"Corrected SDD: {corrected_sdd:.4f} mm")
 
+    cuka_2theta_array = np.linspace(0, 85.405622, 100) # 0 ~ 85.405622까지 1000개의 2θ 값, Cu Kα 기준
+
+    corrected_q_list = recalc_q_list(
+        cuka_2theta_array,        # 원래 q 리스트 (여기서는 CuKα 기준이라고 가정)
+        EXP_SDD,  # 원래 사용된 SDD (mm), 예: 227.7524
+        corrected_sdd, # 새로 보정된 SDD (mm)
+        EXP_ENERGY,     # 실제 X-ray 에너지(keV), q_list를 해석할 때 사용할 에너지
+        converted_energy=ENERGY_CUKA  # q_list를 해석할 때 사용할 에너지, None이면 변환 없음
+    )
+    # 출력해보기
+    print("\n[테스트] recalc_q_list 사용 예시")
+    print(f"원래 q_list 범위:       {cuka_2theta_array[0]:.6f} Å⁻¹ ~ {cuka_2theta_array[-1]:.6f} Å⁻¹")
+    print(f"보정된 corrected_q_list: {corrected_q_list[0]:.6f} Å⁻¹ ~ {corrected_q_list[-1]:.6f} Å⁻¹")
 
 
 if __name__ == "__main__":
