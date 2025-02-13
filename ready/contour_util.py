@@ -647,7 +647,29 @@ def max_SDD_calculation(theta_2_max, pixel_size, beam_center_x, beam_center_y, i
 
     return SDD_max
 
-def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, original_SDD):
+def calculate_corrected_sdd(original_2theta, original_sdd, corrected_2theta, exp_energy, converted_energy=8.042):
+    if converted_energy == None:
+        q_original = original_2theta
+        q_corrected = corrected_2theta
+    else:
+        # 원본 Cu Kα 2θ에 해당하는 q 값 계산
+        q_original = theta_to_q(original_2theta, converted_energy)
+        q_corrected = theta_to_q(corrected_2theta, converted_energy)
+    
+    # 이 q 값을 실험 에너지에서의 2θ로 변환
+    exp_2theta = q_to_2theta(q_original, exp_energy)
+    
+    # 이미지상의 R 계산 (실험 에너지 기준)
+    original_r = original_sdd * np.tan(np.radians(exp_2theta))
+
+    corrected_exp_2theta = q_to_2theta(q_corrected, exp_energy)
+    
+    # 보정된 SDD 계산 (실험 에너지 기준)
+    corrected_sdd = original_r / np.tan(np.radians(corrected_exp_2theta))
+    
+    return corrected_sdd
+
+def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, original_SDD, experiment_energy, converted_energy):
     """
     fit_params를 사용하여 corrected_peak_q 값을 계산하고 tracked_peaks에 추가
 
@@ -657,7 +679,7 @@ def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, origina
         peak_fit_temp_range (tuple): (temp_min, temp_max) - 피팅에 사용된 온도 범위
 
     Returns:
-        dict: corrected_peak_q가 추가된 tracked_peaks
+        dict: corrected_peak_q가 SDD, original_SDD가 추가된 tracked_peaks
     """
     a, b = fit_params
     temp_max = peak_fit_temp_range[1]
@@ -668,10 +690,10 @@ def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, origina
         if T > temp_max:  # 피팅 온도 범위 이후의 데이터에 대해서만
             corrected_q = a * T + b  # 피팅 결과로 계산된 q 값
             entry["corrected_peak_q"] = corrected_q
-            entry["SDD"] = None
+            entry["SDD"] = round(calculate_corrected_sdd(entry["peak_q"], original_SDD, corrected_q, experiment_energy, converted_energy), 4)
         else:
             entry["corrected_peak_q"] = None
-            entry["SDD"] = original_SDD
+            entry["SDD"] = None
             
     return tracked_peaks
 
@@ -907,7 +929,7 @@ def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, e
     print("Fitted parameters (a, b):", fit_params)
 
     # 새로운 함수 호출
-    tracked_peaks = add_corrected_peak_q(tracked_peaks, fit_params, index_range, original_sdd)
+    tracked_peaks = add_corrected_peak_q(tracked_peaks, fit_params, index_range, original_sdd, experiment_energy, converted_energy)
     
     # 결과 확인을 위한 export
     export_tracked_peaks_to_excel_with_correction(tracked_peaks, "tracked_peaks_with_correction.csv")
