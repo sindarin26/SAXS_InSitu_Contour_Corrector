@@ -573,101 +573,217 @@ def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
 # ============================================================
 def q_to_2theta(q, energy_keV):
     """
-    q 값을 2θ 값(degree)으로 변환하는 함수.
-
-    Parameters:
-        q (float or array): q 값 (Å^-1)
-        energy_keV (float): X-ray 에너지 (keV)
-
-    Returns:
-        float or array: 변환된 2θ 값 (degree)
+    q (Å⁻¹)를 주어진 에너지(keV)에서의 2θ (°)로 변환하는 함수.
+    
+    Parameters
+    ----------
+    q : float or array
+        q 값 (Å⁻¹)
+    energy_keV : float
+        X-ray 에너지 (keV)
+    
+    Returns
+    -------
+    float or array
+        변환된 2θ 값 (°)
     """
-    # X-ray 파장 계산 (Å)
     wavelength = 12.398 / energy_keV  # λ = 12.398 / E
-
-    # 2θ 계산
-    theta_rad = np.arcsin((q * wavelength) / (4 * np.pi))  # 라디안 단위
-    theta_deg = np.degrees(2 * theta_rad)  # 도(degree) 단위 변환
-
+    theta_rad = np.arcsin((q * wavelength) / (4 * np.pi))
+    theta_deg = np.degrees(2 * theta_rad)
     return theta_deg
 
 def theta_to_q(theta_2, energy_keV):
     """
-    2θ 값을 q 값(Å^-1)으로 변환하는 함수.
-
-    Parameters:
-        theta_2 (float or array): 2θ 값 (degree)
-        energy_keV (float): X-ray 에너지 (keV)
-
-    Returns:
-        float or array: 변환된 q 값 (Å^-1)
+    2θ (°)를 주어진 에너지(keV)에서의 q (Å⁻¹)로 변환하는 함수.
+    
+    Parameters
+    ----------
+    theta_2 : float or array
+        2θ 값 (°)
+    energy_keV : float
+        X-ray 에너지 (keV)
+    
+    Returns
+    -------
+    float or array
+        변환된 q 값 (Å⁻¹)
     """
-    # X-ray 파장 계산 (Å)
-    wavelength = 12.398 / energy_keV  # λ = 12.398 / E
-
-    # θ 계산 (라디안 변환)
-    theta_rad = np.radians(theta_2 / 2)  # θ = 2θ / 2
-
-    # q 계산
+    wavelength = 12.398 / energy_keV
+    theta_rad = np.radians(theta_2 / 2)
     q_value = (4 * np.pi / wavelength) * np.sin(theta_rad)
-
     return q_value
 
 def max_SDD_calculation(theta_2_max, pixel_size, beam_center_x, beam_center_y, image_size):
     """
-    최대 SDD 값을 계산하는 함수 (MATLAB 좌표 기준).
-
-    Parameters:
-        theta_2_max (float): 최대 2θ 값 (degree)
-        pixel_size (float): 픽셀 크기 (mm)
-        beam_center_x (float): 빔 센터 x 좌표 (MATLAB 기준)
-        beam_center_y (float): 빔 센터 y 좌표 (MATLAB 기준)
-        image_size (tuple): 이미지 크기 (width, height)
-
-    Returns:
-        float: 최대 SDD 값 (mm)
-    """
+    이미지의 네 모서리를 기준으로, 최대 방사 거리(R)를 구한 후 이를 이용하여
+    최대 SDD (sample-to-detector distance)를 계산하는 함수.
     
-    # 최대 2θ에서 θ 계산 (라디안 변환)
+    Parameters
+    ----------
+    theta_2_max : float
+        최대 2θ 값 (°)
+    pixel_size : float
+        픽셀 크기 (mm)
+    beam_center_x : float
+        빔 센터 x 좌표 (MATLAB 좌표 기준)
+    beam_center_y : float
+        빔 센터 y 좌표 (MATLAB 좌표 기준)
+    image_size : tuple
+        이미지 크기 (width, height)
+    
+    Returns
+    -------
+    tuple
+        (최대 SDD (mm), 최대 R (mm))
+    """
     theta_max_rad = np.radians(theta_2_max)
-
-    # MATLAB 기준 좌표 사용 (1-based indexing)
     corners = [(1, 1), (1, image_size[1]), (image_size[0], 1), (image_size[0], image_size[1])]
     
-    # 빔 센터에서 가장 먼 거리 계산
-    R_pixel_max = max(np.sqrt((corner_x - beam_center_x) ** 2 + (corner_y - beam_center_y) ** 2) for corner_x, corner_y in corners)
-
-    corrected_R_pixe_max = round(R_pixel_max, 0) - 1    
+    R_pixel_max = max(np.sqrt((corner_x - beam_center_x) ** 2 + 
+                               (corner_y - beam_center_y) ** 2) 
+                      for corner_x, corner_y in corners)
+    corrected_R_pixel_max = round(R_pixel_max, 0) - 1
+    R_mm_max = corrected_R_pixel_max * pixel_size
     
-    # 픽셀 거리 (mm 단위)
-    R_mm_max = corrected_R_pixe_max * pixel_size
-
-    # SDD 계산
     SDD_max = R_mm_max / np.tan(theta_max_rad)
-
-    return SDD_max
+    return SDD_max, R_mm_max
 
 def calculate_corrected_sdd(original_2theta, original_sdd, corrected_2theta, exp_energy, converted_energy=8.042):
-    if converted_energy == None:
+    """
+    [단일 포인트용] 원래 데이터(원래 2θ 값 또는 q 값)를 기반으로,
+    SDD 보정 후의 새로운 SDD 값을 계산한다.
+    
+    데이터 체계:
+      - 만약 converted_energy가 None이면, 원본 데이터는 q 값으로 저장됨.
+      - converted_energy가 주어지면, 원본 데이터는 변환 전 CuKα 2θ 값으로 저장됨.
+    
+    절차
+    -------
+    1) 입력 데이터(원래 2θ 또는 q)를, 만약 converted_energy가 주어졌다면 CuKα 기준의 2θ → q로 변환.
+    2) 해당 q 값을 exp_energy 기준의 2θ로 변환.
+    3) 기존 SDD를 이용하여, 각 포인트의 detector 상 방사거리 R = original_sdd * tan(2θ_exp)를 계산.
+    4) 같은 R에서, 보정 SDD를 적용하면 새로운 2θ (exp_energy 기준)는 arctan(R/newSDD)로 구해짐.
+    5) 이를 다시 q (exp_energy 기준)로 변환.
+       - 만약 converted_energy가 주어지면 최종 결과를 다시 CuKα 2θ (즉, theta_to_q와 q_to_2theta를 거쳐)
+         변환하여 출력한다.
+    
+    Parameters
+    ----------
+    original_2theta : float
+        원래 데이터 값; converted_energy가 None이면 q 값, 아니면 CuKα 기준 2θ (°)
+    original_sdd : float
+        원래 SDD (mm)
+    corrected_2theta : float
+        보정하고자 하는 2θ 값; converted_energy가 None이면 q 값, 아니면 CuKα 기준 2θ (°)
+    exp_energy : float
+        실험 X-ray 에너지 (keV) – R 계산 시 사용
+    converted_energy : float, optional
+        입력 데이터가 변환된 CuKα 에너지 기준 값 (keV). 
+        None이면 입력/출력은 q 값로 처리함.
+    
+    Returns
+    -------
+    corrected_sdd : float
+        보정 후의 SDD (mm), 계산은 exp_energy 기준 2θ를 사용.
+    """
+    if converted_energy is None:
+        # 입력 데이터가 q 값으로 저장됨
         q_original = original_2theta
         q_corrected = corrected_2theta
     else:
-        # 원본 Cu Kα 2θ에 해당하는 q 값 계산
+        # 입력 데이터가 CuKα 기준의 2θ 값으로 저장됨 → q로 변환
         q_original = theta_to_q(original_2theta, converted_energy)
         q_corrected = theta_to_q(corrected_2theta, converted_energy)
     
-    # 이 q 값을 실험 에너지에서의 2θ로 변환
+    # exp_energy 기준 2θ 계산
     exp_2theta = q_to_2theta(q_original, exp_energy)
     
-    # 이미지상의 R 계산 (실험 에너지 기준)
+    # 원래 SDD에서의 detector 반경 R 계산
     original_r = original_sdd * np.tan(np.radians(exp_2theta))
-
+    
+    # 보정된 2θ (exp_energy 기준) 계산: R = newSDD * tan(2θ_new)
     corrected_exp_2theta = q_to_2theta(q_corrected, exp_energy)
     
-    # 보정된 SDD 계산 (실험 에너지 기준)
+    # 보정 후 SDD = R / tan(2θ_new)
     corrected_sdd = original_r / np.tan(np.radians(corrected_exp_2theta))
     
     return corrected_sdd
+
+def recalc_q_list(
+    q_list,        
+    original_sdd,  
+    corrected_sdd, 
+    energy_keV,     
+    converted_energy=8.042  
+):
+    """
+    [배열 단위] 원래 데이터(저장형태에 따라 q 값 또는 CuKα 기준 2θ 값)를,
+    기존 SDD(original_sdd)에서 측정된 것으로부터 보정 SDD(corrected_sdd)를 적용할 경우
+    최종적으로 exp_energy 기준으로 얻어야 하는 데이터(출력 형식은 입력과 동일)를 재계산한다.
+    
+    데이터 체계
+    -----------
+    - 만약 converted_energy가 None이면, 입력 q_list는 q 값이며 최종 결과도 q 값이다.
+    - converted_energy가 주어지면, 입력 q_list는 CuKα 기준의 2θ 값(°)으로 저장되어 있으며,
+      최종 결과도 동일한 방식(즉, 2θ 값)으로 출력한다.
+    
+    계산 절차
+    -----------
+    1) (converted_energy가 주어졌다면) 입력 2θ(CuKα) → q (CuKα)로 변환.
+    2) 위 q 값을 exp_energy 기준의 2θ로 변환.
+    3) 원래 SDD를 사용하여, 각 포인트의 반경 R = original_sdd * tan( exp_energy 기준 2θ ) 계산.
+    4) 같은 R에 대해, 보정 SDD를 적용하면 새로운 2θ (exp_energy 기준)는 arctan(R / corrected_sdd)로 구해짐.
+    5) 이 새로운 2θ를 exp_energy 기준의 q로 변환.
+    6) 만약 converted_energy가 주어졌다면, 최종 결과를 다시 CuKα 기준의 2θ 값으로 변환.
+    
+    Parameters
+    ----------
+    q_list : array-like
+        원래 데이터. 
+        - converted_energy가 None이면 q 값 (Å⁻¹)
+        - converted_energy가 주어지면 CuKα 기준의 2θ 값 (°)
+    original_sdd : float
+        원래 SDD (mm)
+    corrected_sdd : float
+        보정된 SDD (mm)
+    energy_keV : float
+        exp_energy (q 또는 2θ 변환 시 사용되는 에너지, keV)
+    converted_energy : float, optional
+        입력 데이터가 CuKα 기준일 경우의 에너지 (keV). 
+        None이면 변환 없이 q 값으로 처리.
+    
+    Returns
+    -------
+    corrected_q_list : ndarray
+        - converted_energy가 None이면: 보정 후 q 값 (Å⁻¹)
+        - converted_energy가 주어지면: 보정 후 CuKα 기준의 2θ 값 (°)
+    """
+    # 만약 converted_energy가 주어졌다면, 입력 데이터는 2θ 값(°)이므로 q로 변환
+    if converted_energy is None:
+        # 입력이 q 값으로 저장됨 → 별도 변환 없이 사용
+        q_conv = q_list
+    else:
+        q_conv = theta_to_q(q_list, converted_energy)
+    
+    # 1) exp_energy 기준의 2θ 값으로 변환
+    exp_2theta = q_to_2theta(q_conv, energy_keV)
+    
+    # 2) 원래 SDD에서의 반경 R 계산
+    R = original_sdd * np.tan(np.radians(exp_2theta))
+    
+    # 3) 보정 SDD 적용 시의 새로운 2θ (exp_energy 기준)
+    corrected_2theta = np.degrees(np.arctan(R / corrected_sdd))
+    
+    # 4) 새로운 2θ를 exp_energy 기준의 q로 변환
+    q_temp = theta_to_q(corrected_2theta, energy_keV)
+    
+    # 5) 만약 converted_energy가 주어졌다면, 최종 결과를 CuKα 기준의 2θ 값으로 변환
+    if converted_energy is None:
+        corrected_q_list = q_temp
+    else:
+        corrected_q_list = q_to_2theta(q_temp, converted_energy)
+    
+    return corrected_q_list
 
 def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, original_SDD, experiment_energy, converted_energy):
     """
@@ -690,87 +806,86 @@ def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, origina
         if T > temp_max:  # 피팅 온도 범위 이후의 데이터에 대해서만
             corrected_q = a * T + b  # 피팅 결과로 계산된 q 값
             entry["corrected_peak_q"] = corrected_q
-            entry["SDD"] = round(calculate_corrected_sdd(entry["peak_q"], original_SDD, corrected_q, experiment_energy, converted_energy), 4)
+            entry["corrected_SDD"] = round(calculate_corrected_sdd(entry["peak_q"], original_SDD, corrected_q, experiment_energy, converted_energy), 4)
         else:
             entry["corrected_peak_q"] = None
-            entry["SDD"] = None
+            entry["corrected_SDD"] = None
             
     return tracked_peaks
 
 
-def calculate_sdd_for_tracked_peaks(tracked_peaks, fit_params, fit_index_range, original_sdd, beam_center_x, beam_center_y, pixel_size):
+def calculate_sdd_for_tracked_peaks_refactored(contour_data, tracked_peaks, original_sdd, experiment_energy, converted_energy=8.042):
     """
-    For each tracked peak, calculate the predicted 2theta using the linear fit:
-         twotheta_predicted = a * Temperature + b,
-    and calculate new SDD for indices greater than fit_index_range[1].
-    """
-    a, b = fit_params
-    new_data = []
-    fit_end = fit_index_range[1]
+    각 타임프레임의 contour_data["Data"] 항목에 대해,
+      1. 원래의 q 리스트를 "q_raw"라는 키에 백업하고,
+      2. 해당 타임프레임에 대응하는 tracked_peaks["Data"] 항목에 corrected_SDD와 corrected_peak_q가 존재하면,
+         re-calculation을 통해 새 SDD에 맞는 q 리스트를 계산하여 "q" 값을 덮어쓴다.
     
-    for i, entry in enumerate(tracked_peaks["Data"]):
-        T = entry["Temperature"]
-        measured_twotheta = entry.get("peak_q", 0)  # 현재는 2theta 값이 "peak_q"에 저장되어 있음
-        predicted_twotheta = a * T + b
-        
-        if (i > fit_end) and (measured_twotheta is not None) and (measured_twotheta != 0):
-            # 측정된 2theta로부터 실제 거리 계산
-            twotheta_rad = np.radians(predicted_twotheta) / 2  # 2theta/2 = theta
-            r_pixels = original_sdd * np.tan(twotheta_rad) / pixel_size  # 예상되는 픽셀 반지름
-            
-            # 측정된 2theta로부터 실제 SDD 계산
-            measured_twotheta_rad = np.radians(measured_twotheta) / 2
-            new_sdd = r_pixels * pixel_size / np.tan(measured_twotheta_rad)
-        else:
-            new_sdd = original_sdd
-            
-        new_entry = entry.copy()
-        new_entry["sdd"] = new_sdd
-        new_entry["predicted_twotheta"] = predicted_twotheta
-        new_data.append(new_entry)
+    데이터 체계
+    -----------
+    - contour_data["Data"]의 각 항목은 원래 q 리스트(입력 형식에 따라 q 또는 CuKα 기준의 2θ 값)를 포함한다.
+    - tracked_peaks["Data"]의 각 항목은 같은 타임프레임에 해당하며, 
+      corrected_SDD와 corrected_peak_q가 있으면 해당 타임프레임의 q 리스트를 새 SDD에 맞게 재계산할 대상이다.
+    - converted_energy가 None이면 입력/출력 모두 q 값으로 처리되고,
+      converted_energy가 주어지면 입력 데이터는 CuKα 기준의 2θ 값(°)으로 저장되어 있으며, 최종 출력도 2θ 값 형식으로 처리된다.
     
-    tracked_peaks["Data"] = new_data
-    return tracked_peaks
-
-
-# ============================================================
-# [New Functionality] - (D) Recalculate q values using the theoretical formula
-# ============================================================
-def recalc_q_values(contour_data, tracked_peaks, original_sdd, beam_center_x, beam_center_y, pixel_size, image_size_x=1920, image_size_y=1920):
+    계산 절차
+    -----------
+    1) 각 항목에 대해 원래 q 리스트를 "q_raw"에 백업한다.
+    2) 만약 해당 타임프레임의 tracked_peaks 데이터에 corrected_SDD와 corrected_peak_q가 존재하면,
+       recalc_q_list 함수를 사용하여 q_raw를 원래 SDD(original_sdd)에서 보정 SDD(corrected_SDD)를 적용한 
+       새 q 리스트로 재계산한다.
+    3) 재계산된 q 리스트로 해당 항목의 "q" 값을 덮어쓴다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        contour 데이터가 저장된 dict. "Data" 키 아래 각 항목은 최소한 "q" (및 "Intensity", "Time" 등)를 포함.
+    tracked_peaks : dict
+        피크 추적 결과 데이터가 저장된 dict. "Data" 키 아래 각 항목은 피크 관련 정보와 함께 corrected_SDD,
+        corrected_peak_q 등이 포함될 수 있음.
+    original_sdd : float
+        원래 사용된 SDD (mm)
+    experiment_energy : float
+        q/2θ 변환 시 사용할 실험 X-ray 에너지 (keV)
+    converted_energy : float, optional
+        입력 데이터가 CuKα 기준으로 변환된 에너지 (keV). None이면 입력/출력은 q 값으로 처리.
+    
+    Returns
+    -------
+    dict
+        새 SDD 보정이 적용된 contour_data (각 항목의 "q" 값이 재계산됨).
     """
-    각 스캔에서 2theta 값을 재계산
-    1. 원본 2theta 백업
-    2. 픽셀 위치로부터 새로운 SDD를 사용하여 2theta 재계산
-    """
+    # contour_data의 각 항목에 대해 원래 q 리스트 백업 (q_raw)하기
+    for entry in contour_data["Data"]:
+        if "q_raw" not in entry:
+            # np.array()로 복사하면 안전하게 백업 가능 (리스트일 경우에도)
+            entry["q_raw"] = np.array(entry["q"])
+    
+    # contour_data와 tracked_peaks의 항목이 같은 순서라고 가정하고 index-wise로 처리
     for i, entry in enumerate(contour_data["Data"]):
-        original_twotheta = np.array(entry["q"])  # 현재는 2theta 값이 "q"에 저장되어 있음
-        entry["twotheta_raw"] = original_twotheta.tolist()
+        # 해당 타임프레임의 tracked_peaks 데이터 가져오기
+        try:
+            peak_entry = tracked_peaks["Data"][i]
+        except IndexError:
+            # 만약 tracked_peaks 데이터가 부족하면 건너뛰기
+            continue
         
-        new_sdd = tracked_peaks["Data"][i].get("sdd")
-        if new_sdd is None:
-            new_sdd = original_sdd
-            
-        if abs(new_sdd - original_sdd) > 1e-6:
-            # 각 픽셀 위치에 대한 2D 그리드 생성
-            x = np.arange(image_size_x)
-            y = np.arange(image_size_y)
-            X, Y = np.meshgrid(x, y)
-            
-            # 빔 센터로부터의 반지름 계산 (픽셀 단위)
-            R = np.sqrt((X - beam_center_x)**2 + (Y - beam_center_y)**2)
-            
-            # 원본 2theta에 해당하는 R 값 찾기
-            original_theta_rad = np.radians(original_twotheta) / 2
-            r_pixels = original_sdd * np.tan(original_theta_rad) / pixel_size
-            
-            # 새로운 SDD로 2theta 재계산
-            theta_new = np.arctan(r_pixels * pixel_size / new_sdd)
-            twotheta_new = np.degrees(theta_new * 2)
-            
-            entry["q"] = twotheta_new.tolist()  # 여전히 "q"로 저장하지만 실제로는 2theta 값
-        else:
-            entry["q"] = original_twotheta.tolist()
-            
+        # corrected_SDD와 corrected_peak_q가 존재하는 경우에만 q 리스트 재계산
+        if peak_entry.get("corrected_SDD") is not None and peak_entry.get("corrected_peak_q") is not None:
+            new_sdd = peak_entry["corrected_SDD"]
+            # q_list 재계산: 입력은 백업된 원래 q_raw
+            new_q = recalc_q_list(
+                q_list=entry["q_raw"],
+                original_sdd=original_sdd,
+                corrected_sdd=new_sdd,
+                energy_keV=experiment_energy,
+                converted_energy=converted_energy
+            )
+            # 재계산된 q 리스트로 덮어쓰기
+            entry["q"] = new_q
+        # 만약 해당 타임프레임에 보정 정보가 없다면 원래 q (또는 q_raw) 그대로 유지
+    
     return contour_data
 
 
@@ -935,16 +1050,13 @@ def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, e
     export_tracked_peaks_to_excel_with_correction(tracked_peaks, "tracked_peaks_with_correction.csv")
 
 
-    # tracked_peaks = calculate_sdd_for_tracked_peaks(tracked_peaks, fit_params, index_range, 
-    #                                               original_sdd, beam_center[0], beam_center[1], pixel_size)
+    corrected_contour_data = calculate_sdd_for_tracked_peaks_refactored(contour_data, tracked_peaks, original_sdd, experiment_energy, converted_energy)
     
 
     #export_tracked_peaks_to_excel(tracked_peaks, filename="tracked_peaks.csv")
     
-    # corrected_contour_data = recalc_q_values(contour_data, tracked_peaks, original_sdd, 
-    #                                        beam_center_x, beam_center_y, pixel_size)
     
-    # plot_contour(corrected_contour_data, temp=True, legend=True)
+    plot_contour(corrected_contour_data, temp=True, legend=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract data from .dat files and match with log data.")
