@@ -1,3 +1,4 @@
+#asset/spec_log_extractor.py
 # The extracted data dictionary will have the following structure:
 # {
 #     "filename1": {
@@ -32,10 +33,18 @@ import json
 import datetime
 import argparse
 from pathlib import Path
+import locale
 
 def parse_log_file(log_path):
     extracted_data = {}
     error_log = []
+    
+    # 강제로 로케일 설정 (영어)
+    try:
+        locale.setlocale(locale.LC_TIME, 'C')
+    except locale.Error:
+        # 'C' locale 설정이 안 된다면 en_US로 시도
+        locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
     
     log_path = Path(log_path).resolve()
     if not log_path.exists():
@@ -91,7 +100,8 @@ def parse_log_file(log_path):
             value_8 = round(float(parts[9]), 1)
             temperature = float(parts[10])
             value_9 = float(parts[11])
-            time_str = ' '.join(parts[12:])
+            # 날짜 문자열 추출 시, 끝에 있는 불필요한 점 제거
+            time_str = ' '.join(parts[12:]).rstrip('.')
             time_obj = datetime.datetime.strptime(time_str, "%a %b %d %H:%M:%S %Y")
         except ValueError as e:
             error_log.append(f"[parse_log_file] Value parsing error in line: {line}. Error: {e}")
@@ -132,11 +142,12 @@ def parse_log_file(log_path):
             if 1 in series_data[series_name]:
                 data["Series Elapsed Time"] = data["Elapsed Time"] - series_data[series_name][1]
     
-    indices = sorted([data["Index"] for data in extracted_data.values()])
+    indices = sorted([data["Index"] for data in extracted_data.values() if isinstance(data, dict)])
     if indices and indices[0] != 1:
         error_log.append("[parse_log_file] Missing index 1 in extracted data.")
     
     extracted_data["Error Log"] = error_log
+
     return extracted_data
 
 def main(log_path, output_path):
