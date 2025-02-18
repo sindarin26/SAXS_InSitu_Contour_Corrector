@@ -26,25 +26,55 @@ class ContourSettingsDialog(QtWidgets.QDialog):
 
     def build_fields(self):
         """
-        PLOT_OPTIONS의 top-level (graph_option 제외)와 graph_option 내부의 모든 옵션을
-        (키, 값, parent_key) 튜플의 리스트로 모은 후 4열 그리드에 추가합니다.
+        옵션을 그룹화하여 배치하고, 3열 레이아웃을 유지하면서 빈 공간을 삽입.
         """
         entries = []
-        # top-level 옵션 (graph_option 제외)
-        for key, value in PLOT_OPTIONS.items():
-            if key == 'graph_option':
-                continue
-            entries.append( (key, value, None) )
-        # graph_option 내부 옵션
-        for key, value in PLOT_OPTIONS['graph_option'].items():
-            entries.append( (key, value, 'graph_option') )
         
-        col_count = 4
+        # PLOT_OPTIONS에서 순서에 맞춰 항목 가져오기
+        options_order = [
+            "figure_size", "figure_dpi",  None, # Figure 설정
+
+            "figure_title_enable", "figure_title_text", None,  # Title 관련
+            "contour_title_enable", "contour_title_text", None,
+            "temp_title_enable", "temp_title_text", None,
+
+            "font_label", "font_tick", "font_title",  # 폰트 설정
+
+            "axes_label_size", "tick_label_size", "title_size",  # 라벨 크기 설정
+
+            "contour_xlabel_enable", "contour_xlabel_text", None,  # X축 설정
+            "contour_ylabel_enable", "contour_ylabel_text", None,  # Y축 설정
+            "temp_xlabel_enable", "temp_xlabel_text", None,
+            "temp_ylabel_enable", "temp_ylabel_text", None,
+
+            "contour_grid", "contour_xlim", "global_ylim",  # Grid 및 범위 설정
+            "temp_grid", "temp_xlim", None,
+
+            "contour_cmap", "colorbar_label", "cbar_location",  # 컬러맵 설정
+            "cbar_pad", "contour_levels", None,
+            "contour_lower_percentile", "contour_upper_percentile", None,
+
+            "wspace", "width_ratios", None  # 배치 관련
+        ]
+
+        for key in options_order:
+            if key is None:
+                entries.append((None, None, None))  # 빈칸 추가
+            else:
+                entries.append((key, PLOT_OPTIONS['graph_option'][key], 'graph_option'))
+
+        col_count = 3  # 3열 유지
         row = 0
         col = 0
         for key, value, parent_key in entries:
-            field_widget = self.create_field_widget(key, value, parent_key)
-            self.grid_layout.addWidget(field_widget, row, col)
+            if key is None:
+                # 빈칸을 넣을 때는 QWidget을 추가하여 유지
+                empty_widget = QtWidgets.QWidget()
+                self.grid_layout.addWidget(empty_widget, row, col)
+            else:
+                field_widget = self.create_field_widget(key, value, parent_key)
+                self.grid_layout.addWidget(field_widget, row, col)
+
             col += 1
             if col >= col_count:
                 col = 0

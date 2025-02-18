@@ -270,7 +270,6 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
         canvas = FigureCanvas(fig)
         canvas.draw()
-        print("Contour plot generated.")
         return canvas
 
 # ============================================================

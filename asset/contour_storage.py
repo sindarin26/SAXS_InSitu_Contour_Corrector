@@ -31,42 +31,57 @@ PLOT_OPTIONS = {
     'temp': True,
     'legend': False,
     'graph_option': {
+        # Figure 설정
         "figure_size": (12, 8),
         "figure_dpi": 300,
+        
+        # 타이틀 관련 (True/False 바로 아래에 텍스트 배치)
         "figure_title_enable": False,
         "figure_title_text": "",
+        "contour_title_enable": False,
+        "contour_title_text": "Contour Plot",
+        "temp_title_enable": False,
+        "temp_title_text": "Temperature Plot",
+
+        # 폰트 관련 설정
         "font_label": "Times New Roman",
         "font_tick": "Times New Roman",
         "font_title": "Times New Roman",
+        
+        # Label 크기 설정
         "axes_label_size": 10,
         "tick_label_size": 8,
         "title_size": 12,
+
+        # X축 & Y축 관련 설정 (X 먼저, Y 다음)
         "contour_xlabel_enable": True,
         "contour_xlabel_text": "2theta (Cu K-alpha)",
         "contour_ylabel_enable": True,
         "contour_ylabel_text": "Elapsed Time",
-        "contour_title_enable": False,
-        "contour_title_text": "Contour Plot",
-        "contour_xlim": None,
-        "contour_grid": False,
         "temp_xlabel_enable": True,
         "temp_xlabel_text": "Temperature",
         "temp_ylabel_enable": True,
         "temp_ylabel_text": "Elapsed Time",
-        "temp_title_enable": False,
-        "temp_title_text": "Temperature Plot",
+
+        # Grid 및 범위 설정
+        "contour_grid": False,
+        "contour_xlim": None,
+        "global_ylim": None,
         "temp_xlim": None,
         "temp_grid": True,
-        "global_ylim": None,
-        "wspace": 0.00,
-        "width_ratios": [6, 2],
-        "contour_levels": 200,
+
+        # 컬러맵 및 색상 관련 설정
         "contour_cmap": "inferno",
+        "contour_levels": 200,
         "contour_lower_percentile": 0.1,
         "contour_upper_percentile": 98,
         "colorbar_label": "log10(Intensity)",
         "cbar_location": "left",
         "cbar_pad": 0.15,
+
+        # 배치 및 비율
+        "wspace": 0.00,
+        "width_ratios": [6, 2],
     }
 }
 
