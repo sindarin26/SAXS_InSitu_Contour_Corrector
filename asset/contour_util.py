@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from scipy.optimize import curve_fit  # 가우시안 피팅용
 import pandas as pd  # CSV (엑셀) 출력용
-from spec_log_extractor import parse_log_file
-from dat_extractor import process_dat_files
 import time
 
 # ============================================================
@@ -1326,11 +1324,14 @@ def fit_peak_vs_temp(tracked_peaks, fit_temp_range):
 # MAIN
 # ============================================================
 def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, experiment_energy, converted_energy, q_format):
+
+    from spec_log_extractor import parse_log_file
+    from dat_extractor import process_dat_files
     log_data = parse_log_file(log_path)
     extracted_data = process_dat_files(dat_dir, log_data)
     selected_series = select_series(extracted_data)
-    normal_range, adjust_range = select_temperature_ranges(extracted_data, selected_series, debug=True)
-    extracted_data = temp_correction(extracted_data, selected_series, normal_range, adjust_range, debug=True)
+    normal_range, adjust_range = select_temperature_ranges(extracted_data, selected_series, debug=False)
+    extracted_data = temp_correction(extracted_data, selected_series, normal_range, adjust_range, debug=False)
     for entry in extracted_data.values():
         if isinstance(entry, dict) and "q" in entry and "Intensity" in entry:
             if len(entry["q"]) == 0 or len(entry["Intensity"]) == 0:

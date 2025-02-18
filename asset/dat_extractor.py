@@ -34,7 +34,6 @@ import json
 import argparse
 from pathlib import Path
 import numpy as np
-from asset.spec_log_extractor import parse_log_file
 
 def parse_dat_file(dat_path):
     dat_path = Path(dat_path).resolve()
@@ -88,6 +87,9 @@ def process_dat_files(dat_dir, extracted_data):
     return extracted_data
 
 def main(dat_dir, log_path, output_dir):
+
+    from spec_log_extractor import parse_log_file
+
     extracted_data = parse_log_file(log_path)
     extracted_data = process_dat_files(dat_dir, extracted_data)
     

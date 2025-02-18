@@ -1,7 +1,7 @@
 import os
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
-from asset.storage import DATA, PATH_INFO, PARAMS
+from asset.contour_storage import DATA, PATH_INFO, PARAMS
 from asset.page_asset import DragDropLineEdit, normalize_path
 from asset.spec_log_extractor import parse_log_file
 from asset.dat_extractor import process_dat_files
@@ -277,12 +277,6 @@ class BrowsePage(QtCore.QObject):
     def gotoNextPage(self):
         """Prepare data and move to next page"""
         try:
-            from contour_util import select_series, extract_contour_data
-            
-            # Get selected series and extract contour data
-            selected_series = select_series(DATA['extracted_data'])
-            DATA['contour_data'] = extract_contour_data(selected_series, DATA['extracted_data'])
-            
             # Move to next page
             self.main.SW_Main_page.setCurrentIndex(1)
             
