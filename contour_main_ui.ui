@@ -50,7 +50,7 @@
               <item>
                <widget class="QLineEdit" name="LE_spec_log_dir">
                 <property name="text">
-                 <string>/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/log241219-HS</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -83,14 +83,14 @@
               <item>
                <widget class="QLabel" name="label_2">
                 <property name="text">
-                 <string>.dat file</string>
+                 <string>.dat file folder</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QLineEdit" name="LE_dat_dir">
                 <property name="text">
-                 <string>/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged/</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -123,7 +123,7 @@
               <item>
                <widget class="QLabel" name="label_3">
                 <property name="text">
-                 <string>Output</string>
+                 <string>Output folder</string>
                 </property>
                </widget>
               </item>
@@ -861,18 +861,25 @@
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_29">
+             <layout class="QHBoxLayout" name="horizontalLayout_29" stretch="5,5,1">
               <item>
                <widget class="QLabel" name="label_21">
                 <property name="text">
-                 <string>Current Output direction: </string>
+                 <string>Current Output Folder: </string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="L_current_output_dir">
                 <property name="text">
-                 <string>Current Output Direction</string>
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="PB_open_output_folder">
+                <property name="text">
+                 <string>Open Output Folder</string>
                 </property>
                </widget>
               </item>

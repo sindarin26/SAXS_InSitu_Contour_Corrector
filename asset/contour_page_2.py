@@ -202,91 +202,89 @@ class ContourPlotPage(QtCore.QObject):
             QtWidgets.QMessageBox.warning(self.main, "Export", "No contour plot available to export.")
             return
 
-        # 파일명 구성: {Current_Series}_[xlim정보]_[ylim정보]_시간.png
-        series = PROCESS_STATUS.get('selected_series') or "Series"
-        # xlim, ylim은 graph_option 내의 값
-        xlim = PLOT_OPTIONS['graph_option'].get("contour_xlim")
-        ylim = PLOT_OPTIONS['graph_option'].get("global_ylim")
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        # 컨투어 플롯 이미지 저장
-        name_parts = [series]
-        if xlim is not None:
-            name_parts.append(f"xlim{str(xlim)}")
-        if ylim is not None:
-            name_parts.append(f"ylim{str(ylim)}")
-        name_parts.append(timestamp)
-        filename = "_".join(name_parts) + ".png"
-        output_path = os.path.join(output_dir, filename)
-        
-        try:
-            self.canvas.figure.savefig(output_path, format='png')
-            QtWidgets.QMessageBox.information(self.main, "Export", f"Image saved as:\n{output_path}")
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
-        
-        # 온도 데이터 엑셀 내보내기 (PB_export_temp_on이 pressed 상태이면)
+        # 저장할 파일 수 계산
+        total_files = 1  # 기본 컨투어 플롯
         if self.PB_export_temp_on.isChecked():
-            contour_data = DATA.get('contour_data')
-            if contour_data is None:
-                QtWidgets.QMessageBox.warning(self.main, "Export", "No contour data available.")
-                return
-                
-            times, temperatures = contour_data.get("Time-temp", ([], []))
-            if not times or not temperatures:
-                QtWidgets.QMessageBox.warning(self.main, "Export", "No temperature data found in contour data.")
-                return
-                
-            # 시간과 온도 데이터 DataFrame 생성
-            temp_data = {
-                'Time': times,
-                'Temperature': temperatures
-            }
-            df_temp = pd.DataFrame(temp_data)
-            
-            # 엑셀 파일로 저장
-            temp_filename = "_".join([series, "temperature", timestamp]) + ".xlsx"
-            temp_output_path = os.path.join(output_dir, temp_filename)
-            
-            try:
-                df_temp.to_excel(temp_output_path, index=False)
-                QtWidgets.QMessageBox.information(self.main, "Export", f"Temperature data saved as:\n{temp_output_path}")
-            except Exception as e:
-                QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
-        
-        # Extracted data 내보내기 (PB_export_data_on이 pressed 상태이면)
+            total_files += 1
         if self.PB_export_data_on.isChecked():
-            contour_data = DATA.get('contour_data')
-            if contour_data is None:
-                QtWidgets.QMessageBox.warning(self.main, "Export", "No contour data available.")
-                return
-                
-            data_entries = contour_data.get("Data", [])
-            if not data_entries:
-                QtWidgets.QMessageBox.warning(self.main, "Export", "No data entries found in contour data.")
-                return
-                
-            # 데이터프레임 생성을 위한 딕셔너리
-            data_dict = {}
-            for idx, entry in enumerate(data_entries, 1):
-                q_key = f"q_{idx}"
-                intensity_key = f"intensity_{idx}"
-                data_dict[q_key] = pd.Series(entry.get("q", []))
-                data_dict[intensity_key] = pd.Series(entry.get("Intensity", []))
-            
-            # 데이터프레임 생성
-            df_all = pd.DataFrame(data_dict)
-            
-            # 엑셀 파일로 저장
-            data_filename = "_".join([series, "raw_data", timestamp]) + ".xlsx"
-            data_output_path = os.path.join(output_dir, data_filename)
-            
-            try:
-                df_all.to_excel(data_output_path, index=False, sheet_name='Raw Data')
-                QtWidgets.QMessageBox.information(self.main, "Export", f"Extracted data saved as:\n{data_output_path}")
-            except Exception as e:
-                print(f"Debug: Export error: {str(e)}")
-                QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))  
+            total_files += 1
+
+        # 프로그레스 다이얼로그 생성 (먼저 띄운 후 UI 업데이트)
+        progress = LoadingDialog(parent=self.main, message="Exporting files...")
+        progress.progress.setMaximum(total_files)
+        progress.progress.setValue(0)
+        progress.show()
+
+        # UI 업데이트 강제 실행 (다이얼로그가 즉시 표시되도록)
+        QtWidgets.QApplication.processEvents()
+
+        try:
+            # 파일명 기본 정보 설정
+            series = PROCESS_STATUS.get('selected_series') or "Series"
+            xlim = PLOT_OPTIONS['graph_option'].get("contour_xlim")
+            ylim = PLOT_OPTIONS['graph_option'].get("global_ylim")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # 1. 컨투어 플롯 이미지 저장
+            progress.label.setText("Saving contour plot...")
+            QtWidgets.QApplication.processEvents()  # UI 업데이트
+            name_parts = [series]
+            if xlim is not None:
+                name_parts.append(f"xlim{str(xlim)}")
+            if ylim is not None:
+                name_parts.append(f"ylim{str(ylim)}")
+            name_parts.append(timestamp)
+            filename = "_".join(name_parts) + ".png"
+            output_path = os.path.join(output_dir, filename)
+            self.canvas.figure.savefig(output_path, format='png')
+            progress.progress.setValue(1)
+
+            # 2. 온도 데이터 저장
+            if self.PB_export_temp_on.isChecked():
+                progress.label.setText("Saving temperature data...")
+                QtWidgets.QApplication.processEvents()
+                contour_data = DATA.get('contour_data')
+                if contour_data:
+                    times, temperatures = contour_data.get("Time-temp", ([], []))
+                    if times and temperatures:
+                        temp_data = {
+                            'Time': times,
+                            'Temperature': temperatures
+                        }
+                        df_temp = pd.DataFrame(temp_data)
+                        temp_filename = "_".join([series, "temperature", timestamp]) + ".xlsx"
+                        temp_output_path = os.path.join(output_dir, temp_filename)
+                        df_temp.to_excel(temp_output_path, index=False)
+                progress.progress.setValue(2)
+
+            # 3. q/Intensity 데이터 저장
+            if self.PB_export_data_on.isChecked():
+                progress.label.setText("Saving intensity data...")
+                QtWidgets.QApplication.processEvents()
+                contour_data = DATA.get('contour_data')
+                if contour_data:
+                    data_entries = contour_data.get("Data", [])
+                    if data_entries:
+                        data_dict = {}
+                        for idx, entry in enumerate(data_entries, 1):
+                            q_key = f"q_{idx}"
+                            intensity_key = f"intensity_{idx}"
+                            data_dict[q_key] = pd.Series(entry.get("q", []))
+                            data_dict[intensity_key] = pd.Series(entry.get("Intensity", []))
+                        
+                        df_all = pd.DataFrame(data_dict)
+                        data_filename = "_".join([series, "raw_data", timestamp]) + ".xlsx"
+                        data_output_path = os.path.join(output_dir, data_filename)
+                        df_all.to_excel(data_output_path, index=False, sheet_name='Raw Data')
+                progress.progress.setValue(3)
+
+            # 모든 작업이 완료되면 성공 메시지 표시 후 다이얼로그 닫기
+            progress.label.setText("Export completed successfully!")
+            QtCore.QTimer.singleShot(1000, progress.close)  # 1초 후 자동으로 닫힘
+
+        except Exception as e:
+            progress.close()
+            QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
 
     def open_contour_settings(self):
         """컨투어 설정 다이얼로그 열기: 값이 바뀌면 즉시 plot_contour 재생성 호출"""
