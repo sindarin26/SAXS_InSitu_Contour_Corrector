@@ -29,7 +29,7 @@ PARAMS = {
 # Plot options
 PLOT_OPTIONS = {
     'temp': True,
-    'legend': True,
+    'legend': False,
     'graph_option': {
         "figure_size": (12, 8),
         "figure_dpi": 300,
@@ -45,7 +45,7 @@ PLOT_OPTIONS = {
         "contour_xlabel_text": "2theta (Cu K-alpha)",
         "contour_ylabel_enable": True,
         "contour_ylabel_text": "Elapsed Time",
-        "contour_title_enable": True,
+        "contour_title_enable": False,
         "contour_title_text": "Contour Plot",
         "contour_xlim": None,
         "contour_grid": False,
@@ -59,7 +59,7 @@ PLOT_OPTIONS = {
         "temp_grid": True,
         "global_ylim": None,
         "wspace": 0.00,
-        "width_ratios": [7, 2],
+        "width_ratios": [6, 2],
         "contour_levels": 200,
         "contour_cmap": "inferno",
         "contour_lower_percentile": 0.1,
