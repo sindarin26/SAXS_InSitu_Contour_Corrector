@@ -60,7 +60,7 @@ PLOT_OPTIONS = {
         "global_ylim": None,
         "wspace": 0.00,
         "width_ratios": [7, 2],
-        "contour_levels": 100,
+        "contour_levels": 200,
         "contour_cmap": "inferno",
         "contour_lower_percentile": 0.1,
         "contour_upper_percentile": 98,

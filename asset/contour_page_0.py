@@ -17,7 +17,7 @@ class BrowsePage(QtCore.QObject):
     def debug_init(self):
         self.LE_spec_log_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/log241219-HS")
         self.LE_dat_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged/")
-        self.LE_output_dir.setText("./")
+        self.LE_output_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Python/SAXS_InSitu_Contour_Corrector/ready/test_output")
 
 
     def setupPageWidgets(self):
