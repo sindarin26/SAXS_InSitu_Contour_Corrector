@@ -48,38 +48,45 @@ class TempCorrectionHelper:
         self.plot_widget.plot(indices, self.temp_data, pen='b')
         
     def add_selection_lines(self):
-        """Add vertical lines for range selection"""
         if self.temp_data is None:
             return
 
-        # 기존 플롯 초기화
+        # 1) 플롯 초기화 및 전체 데이터 플롯
         self.plot_widget.clear()
-
-        # 현재 데이터를 플롯
         indices = np.arange(len(self.temp_data))
         self.plot_widget.plot(indices, self.temp_data, pen='b')
 
+        # y좌표를 어느 정도 위로 설정 (라벨을 보기 좋게)
+        y_offset = (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
+        label_ypos = np.max(self.temp_data) + y_offset
+
         if self.selection_mode == "steady":
-            # Steady 상태를 지정할 두 수직선
-            pos1, pos2 = len(indices) // 4, len(indices) * 3 // 4
-            
-            # DraggableLine 호출부에서 value= 대신 pos= 사용
+            pos1, pos2 = len(indices)//4, len(indices)*3//4
+
             line1 = DraggableLine(pos=pos1, bounds=(0, len(indices)-1))
             line2 = DraggableLine(pos=pos2, bounds=(0, len(indices)-1))
 
-            # 라벨 설정
-            label1 = pg.TextItem(text="Start", color=(0, 0, 0))
-            label2 = pg.TextItem(text="End", color=(0, 0, 0))
+            # 라벨 생성 (초기 텍스트: "Start\n(인덱스, 온도°C)")
+            label1 = pg.TextItem(color=(0, 0, 0))
+            label2 = pg.TextItem(color=(0, 0, 0))
 
-            # 라벨 위치 조정
-            y_pos = np.max(self.temp_data) + (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
-            label1.setPos(pos1, y_pos)
-            label2.setPos(pos2, y_pos)
+            # 우선 임시 위치에 라벨 배치
+            label1.setPos(pos1, label_ypos)
+            label2.setPos(pos2, label_ypos)
 
+            # 라벨을 라인에 연결
             line1.set_label(label1)
             line2.set_label(label2)
 
-            # 플롯에 요소 추가
+            # 실제 콜백(시그널) 연결 - 드래그 시 라벨 업데이트
+            line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
+            line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+
+            # 초기 한 번 업데이트
+            self.update_line_label(line1, "Start", label_ypos)
+            self.update_line_label(line2, "End", label_ypos)
+
+            # 플롯에 추가
             self.plot_widget.addItem(line1)
             self.plot_widget.addItem(line2)
             self.plot_widget.addItem(label1)
@@ -88,26 +95,27 @@ class TempCorrectionHelper:
             self.steady_lines = [line1, line2]
 
         elif self.selection_mode == "adjust":
-            # Adjust 상태를 지정할 두 수직선
-            pos1, pos2 = len(indices) // 4, len(indices) * 3 // 4
-            
-            # 마찬가지로 pos= 사용
+            pos1, pos2 = len(indices)//4, len(indices)*3//4
+
             line1 = DraggableLine(pos=pos1, bounds=(0, len(indices)-1))
             line2 = DraggableLine(pos=pos2, bounds=(0, len(indices)-1))
 
-            # 라벨 설정
-            label1 = pg.TextItem(text="Adjust Start", color=(0, 0, 0))
-            label2 = pg.TextItem(text="Adjust End", color=(0, 0, 0))
+            label1 = pg.TextItem(color=(0, 0, 0))
+            label2 = pg.TextItem(color=(0, 0, 0))
 
-            # 라벨 위치 조정
-            y_pos = np.max(self.temp_data) + (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
-            label1.setPos(pos1, y_pos)
-            label2.setPos(pos2, y_pos)
+            label1.setPos(pos1, label_ypos)
+            label2.setPos(pos2, label_ypos)
 
             line1.set_label(label1)
             line2.set_label(label2)
 
-            # 플롯에 요소 추가
+            # adjust 모드에서는 "Adjust Start", "Adjust End" 등으로 표시 가능
+            line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Adjust Start", label_ypos))
+            line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "Adjust End", label_ypos))
+            
+            self.update_line_label(line1, "Adjust Start", label_ypos)
+            self.update_line_label(line2, "Adjust End", label_ypos)
+
             self.plot_widget.addItem(line1)
             self.plot_widget.addItem(line2)
             self.plot_widget.addItem(label1)
@@ -115,8 +123,8 @@ class TempCorrectionHelper:
 
             self.adjust_lines = [line1, line2]
 
-        # X, Y축 격자 표시
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+
 
     def get_steady_range(self):
         """Return (start, end) index of the steady range."""
@@ -188,6 +196,36 @@ class TempCorrectionHelper:
         except Exception as e:
             print(f"Error in temperature correction: {str(e)}")
             return None
+        
+
+    def update_line_label(self, line, prefix, fixed_y):
+        """
+        수직선 라벨을 '(인덱스, 온도°C)' 형태로 업데이트하는 메서드.
+        prefix: "Start", "End", "Adjust Start" 등 라벨 맨 위 줄 텍스트
+        fixed_y: 라벨을 놓을 y좌표(고정)
+        """
+        if self.temp_data is None:
+            return
+
+        # 1) 현재 라인 x좌표(=인덱스) 가져오기
+        x_pos = line.value()
+
+        # 2) 배열 인덱스는 정수로 처리 (범위 밖이면 클램프)
+        idx = int(round(x_pos))
+        if idx < 0:
+            idx = 0
+        elif idx >= len(self.temp_data):
+            idx = len(self.temp_data) - 1
+
+        # 3) 해당 인덱스의 온도값 찾기
+        temp_val = self.temp_data[idx]
+
+        # 4) 라벨 텍스트 갱신
+        #    prefix 줄바꿈 후 (인덱스, 온도)
+        line.label.setText(f"{prefix}\n({idx}, {temp_val:.2f}°C)")
+
+        # 5) 라벨 위치는 x좌표 = line.value(), y좌표 = fixed_y (고정)
+        line.label.setPos(x_pos, fixed_y)
 
 def create_plot_widget():
     """Create a preconfigured plot widget"""
