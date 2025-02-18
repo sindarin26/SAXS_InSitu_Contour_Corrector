@@ -277,6 +277,9 @@ class BrowsePage(QtCore.QObject):
     def gotoNextPage(self):
         """Prepare data and move to next page"""
         try:
+            # Initialize series combobox before moving to next page
+            self.main.temp_correction_page.initialize_series_combobox()
+            
             # Move to next page
             self.main.SW_Main_page.setCurrentIndex(1)
             

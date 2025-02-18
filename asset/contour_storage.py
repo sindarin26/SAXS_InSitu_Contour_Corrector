@@ -25,3 +25,52 @@ PARAMS = {
     'image_size_y': 1920,
     'q_format': 'CuKalpha'
 }
+
+# Plot options
+PLOT_OPTIONS = {
+    'temp': True,
+    'legend': True,
+    'graph_option': {
+        "figure_size": (12, 8),
+        "figure_dpi": 300,
+        "figure_title_enable": False,
+        "figure_title_text": "",
+        "font_label": "Times New Roman",
+        "font_tick": "Times New Roman",
+        "font_title": "Times New Roman",
+        "axes_label_size": 10,
+        "tick_label_size": 8,
+        "title_size": 12,
+        "contour_xlabel_enable": True,
+        "contour_xlabel_text": "2theta (Cu K-alpha)",
+        "contour_ylabel_enable": True,
+        "contour_ylabel_text": "Elapsed Time",
+        "contour_title_enable": True,
+        "contour_title_text": "Contour Plot",
+        "contour_xlim": None,
+        "contour_grid": False,
+        "temp_xlabel_enable": True,
+        "temp_xlabel_text": "Temperature",
+        "temp_ylabel_enable": True,
+        "temp_ylabel_text": "Elapsed Time",
+        "temp_title_enable": False,
+        "temp_title_text": "Temperature Plot",
+        "temp_xlim": None,
+        "temp_grid": True,
+        "global_ylim": None,
+        "wspace": 0.00,
+        "width_ratios": [7, 2],
+        "contour_levels": 100,
+        "contour_cmap": "inferno",
+        "contour_lower_percentile": 0.1,
+        "contour_upper_percentile": 98,
+        "colorbar_label": "log10(Intensity)",
+        "cbar_location": "left",
+        "cbar_pad": 0.15,
+    }
+}
+
+# Process status and selections
+PROCESS_STATUS = {
+    'selected_series': None,  # Currently selected series
+}

@@ -1,7 +1,7 @@
 #asset.tempcorrectionpage.py
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
-from asset.contour_storage import DATA, PATH_INFO, PARAMS
+from asset.contour_storage import DATA, PATH_INFO, PARAMS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog
 from asset.contour_util_gui import TempCorrectionHelper, create_plot_widget
 import pyqtgraph as pg
@@ -87,9 +87,11 @@ class TempCorrectionPage(QtCore.QObject):
         if index == 0:  # None selected
             self.clear_all_plots()
             self.current_series = None
+            PROCESS_STATUS['selected_series'] = None
             return
 
         self.current_series = self.CB_series.currentText()
+        PROCESS_STATUS['selected_series'] = self.current_series
         self.load_series_data()
         self.update_all_plots()
 

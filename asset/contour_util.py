@@ -1,4 +1,4 @@
-#asset/dat_extractor.py
+#asset/contour_util.py
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,7 +63,7 @@ def extract_contour_data(selected_series, extracted_data):
         ]
     }
 
-def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
+def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=False):
     """
     Generate contour plot with interpolated data, optionally with a Temperature vs Time subplot.
     """
@@ -121,6 +121,7 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
         return
     lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
     upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
+    
     if temp:
         fig, (ax_contour, ax_temp) = plt.subplots(
             ncols=2,
@@ -263,7 +264,14 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None):
                          fontsize=final_opt["title_size"],
                          fontweight='bold',
                          fontname=final_opt["font_title"])
-    plt.show()
+    if not GUI:
+        plt.show()
+    else:
+        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+        canvas = FigureCanvas(fig)
+        canvas.draw()
+        print("Contour plot generated.")
+        return canvas
 
 # ============================================================
 # Temperature Correction Functions
@@ -1340,7 +1348,7 @@ def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, e
     for entry in contour_data["Data"]:
         if len(entry["q"]) == 0 or len(entry["Intensity"]) == 0:
             print(f"Warning: Missing data detected in time frame {entry['Time']}")
-    plot_contour(contour_data, temp=True, legend=True)
+    plot_contour(contour_data, temp=True, legend=True, graph_option=None)
 
 
     q_range = select_q_range(contour_data)
