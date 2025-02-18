@@ -242,6 +242,7 @@ class TempCorrectionPage(QtCore.QObject):
         self.load_series_data()
         self.plot_raw_data()
         self.plot_corrected_data()
+        self.reset_adjustment()
         
         # Show success message
         QtWidgets.QMessageBox.information(

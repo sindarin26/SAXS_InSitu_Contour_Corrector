@@ -4,8 +4,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow
 import pyqtgraph as pg
 from asset.contour_main_ui import Ui_MainWindow
-from asset.browsepage import BrowsePage
-from asset.tempcorrectionpage import TempCorrectionPage
+from asset.contour_page_0 import BrowsePage
+from asset.contour_page_1 import TempCorrectionPage
 
 class MainWindow(QMainWindow):
     def __init__(self, use_thread=True):

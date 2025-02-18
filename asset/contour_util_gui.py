@@ -45,16 +45,33 @@ class TempCorrectionHelper:
             
         self.plot_widget.clear()
         indices = np.arange(len(self.temp_data))
-        self.plot_widget.plot(indices, self.temp_data, pen='b')
+        self.plot_widget.plot(
+            indices, 
+            self.temp_data,
+            pen=pg.mkPen(color='k', width=1),  # 검정색 실선
+            symbol='o',                         # 동그라미 마커
+            symbolSize=5,                       # 마커 크기
+            symbolPen=pg.mkPen('k'),           # 마커 테두리 검정
+            symbolBrush=pg.mkBrush('w')        # 마커 내부 흰색
+        )
+
         
     def add_selection_lines(self):
         if self.temp_data is None:
             return
 
-        # 1) 플롯 초기화 및 전체 데이터 플롯
+        # 플롯 초기화 및 전체 데이터 플롯
         self.plot_widget.clear()
         indices = np.arange(len(self.temp_data))
-        self.plot_widget.plot(indices, self.temp_data, pen='b')
+        self.plot_widget.plot(
+            indices, 
+            self.temp_data,
+            pen=pg.mkPen(color='k', width=1),  # 검정색 실선
+            symbol='o',                         # 동그라미 마커
+            symbolSize=5,                       # 마커 크기
+            symbolPen=pg.mkPen('k'),           # 마커 테두리 검정
+            symbolBrush=pg.mkBrush('w')        # 마커 내부 흰색
+        )
 
         # y좌표를 어느 정도 위로 설정 (라벨을 보기 좋게)
         y_offset = (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
@@ -65,6 +82,10 @@ class TempCorrectionHelper:
 
             line1 = DraggableLine(pos=pos1, bounds=(0, len(indices)-1))
             line2 = DraggableLine(pos=pos2, bounds=(0, len(indices)-1))
+
+            line1.setPen(pg.mkPen(color='b', width=1.5))  # 파란색 실선
+            line2.setPen(pg.mkPen(color='b', width=1.5))
+
 
             # 라벨 생성 (초기 텍스트: "Start\n(인덱스, 온도°C)")
             label1 = pg.TextItem(color=(0, 0, 0))
@@ -99,6 +120,10 @@ class TempCorrectionHelper:
 
             line1 = DraggableLine(pos=pos1, bounds=(0, len(indices)-1))
             line2 = DraggableLine(pos=pos2, bounds=(0, len(indices)-1))
+
+            line1.setPen(pg.mkPen(color='r', width=1.5))
+            line2.setPen(pg.mkPen(color='r', width=1.5))
+
 
             label1 = pg.TextItem(color=(0, 0, 0))
             label2 = pg.TextItem(color=(0, 0, 0))
