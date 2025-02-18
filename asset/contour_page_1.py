@@ -5,6 +5,7 @@ from asset.contour_storage import DATA, PATH_INFO, PARAMS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog
 from asset.contour_util_gui import TempCorrectionHelper, create_plot_widget
 import pyqtgraph as pg
+from asset.contour_util import extract_contour_data
 
 class TempCorrectionPage(QtCore.QObject):
     def __init__(self, main_window):
@@ -66,7 +67,7 @@ class TempCorrectionPage(QtCore.QObject):
         self.PB_apply_temp.clicked.connect(self.apply_temp_range)
         self.PB_apply_corrected_temp.clicked.connect(self.apply_correction)
         self.PB_back_0.clicked.connect(lambda: self.main.SW_Main_page.setCurrentIndex(0))
-        self.PB_next_2.clicked.connect(lambda: self.main.SW_Main_page.setCurrentIndex(2))
+        self.PB_next_2.clicked.connect(self.gotoNextPage)
 
     def initialize_series_combobox(self):
         """Initialize series combobox with available series"""
@@ -252,3 +253,43 @@ class TempCorrectionPage(QtCore.QObject):
             "Success",
             "Temperature correction has been applied successfully."
         )
+
+    def gotoNextPage(self):
+        """Prepare data and move to next page"""
+        try:
+            # contour_data 생성
+            if not PROCESS_STATUS['selected_series']:
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "Warning",
+                    "No series selected. Please select a series first."
+                )
+                return
+                
+            # Create contour data
+            loading = LoadingDialog(self.main, "Creating contour data...")
+            loading.show()
+            QtWidgets.QApplication.processEvents()
+            
+            try:
+                contour_data = extract_contour_data(
+                    PROCESS_STATUS['selected_series'], 
+                    DATA['extracted_data']
+                )
+                DATA['contour_data'] = contour_data
+                self.main.SW_Main_page.setCurrentIndex(2)
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self.main,
+                    "Error",
+                    f"Failed to create contour data: {str(e)}"
+                )
+            finally:
+                loading.close()
+                
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Error",
+                f"Failed to prepare data for next page:\n{str(e)}"
+            )

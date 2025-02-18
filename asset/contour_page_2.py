@@ -37,7 +37,14 @@ class ContourPlotPage(QtCore.QObject):
         # Initialize variables
         self.current_series = None
         self.canvas = None
+        
+        # Add resize event filter to GV_contour
+        self.GV_contour.installEventFilter(self)
 
+    def eventFilter(self, obj, event):
+        if obj == self.GV_contour and event.type() == QtCore.QEvent.Resize:
+            self.resize_figure_to_view()
+        return super().eventFilter(obj, event)
 
     def setup_output_widgets(self):
         """Initialize output directory widgets with drag and drop support"""
@@ -85,30 +92,20 @@ class ContourPlotPage(QtCore.QObject):
     def prepare_and_create_contour(self):
         """Prepare contour data and create plot"""
         try:
-            # Clear any existing contour data to ensure fresh plotting
-            DATA['contour_data'] = None
-            
             if not DATA.get('contour_data'):
-                if not PROCESS_STATUS['selected_series']:
-                    QtWidgets.QMessageBox.warning(
-                        self.main,
-                        "Warning",
-                        "No series selected. Please go back and select a series."
-                    )
-                    return
-                    
-                # Extract contour data using the selected series
-                contour_data = extract_contour_data(PROCESS_STATUS['selected_series'], DATA['extracted_data'])
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "Warning",
+                    "No contour data available. Please go back and process the data first."
+                )
+                return
                 
-                # Store the contour data
-                DATA['contour_data'] = contour_data
-                
-                # Update series label
-                self.L_current_series.setText(f"Current Series: {PROCESS_STATUS['selected_series']}")
+            # Update series label
+            self.L_current_series.setText(f"Current Series: {PROCESS_STATUS['selected_series']}")
             
             # Create and display the contour plot
             self.create_contour_plot()
-            
+                
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self.main,
@@ -122,6 +119,15 @@ class ContourPlotPage(QtCore.QObject):
             print("No contour data available")
             return
             
+        # Calculate minimum size needed for the figure
+        fig_size = PLOT_OPTIONS['graph_option']['figure_size']
+        dpi = PLOT_OPTIONS['graph_option']['figure_dpi']
+        min_width = int(fig_size[0] * dpi / 4)  # 최소 크기는 원본의 1/4
+        min_height = int(fig_size[1] * dpi / 4)
+        
+        # Set minimum size for GraphicsView
+        self.GV_contour.setMinimumSize(min_width, min_height)
+            
         # Clear existing layout
         if self.GV_contour.layout():
             QtWidgets.QWidget().setLayout(self.GV_contour.layout())
@@ -129,7 +135,7 @@ class ContourPlotPage(QtCore.QObject):
         # Create layout
         layout = QtWidgets.QVBoxLayout()
         
-        # Use plot options directly from PLOT_OPTIONS
+        # Create figure with original size from PLOT_OPTIONS
         canvas = plot_contour(
             DATA['contour_data'],
             temp=PLOT_OPTIONS['temp'],
@@ -139,30 +145,65 @@ class ContourPlotPage(QtCore.QObject):
         )
         
         if canvas:
-            # Set size policy
+            # Create a container widget
+            container = QtWidgets.QWidget()
+            container_layout = QtWidgets.QVBoxLayout(container)
+            container_layout.setContentsMargins(0, 0, 0, 0)
+            container_layout.addWidget(canvas)
+            
+            # Set policies
             canvas.setSizePolicy(
+                QtWidgets.QSizePolicy.Ignored,
+                QtWidgets.QSizePolicy.Ignored
+            )
+            container.setSizePolicy(
                 QtWidgets.QSizePolicy.Expanding,
                 QtWidgets.QSizePolicy.Expanding
             )
             
-            # Configure the layout
+            # Add to main layout
             layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(canvas)
+            layout.addWidget(container)
             
-            # Configure the GraphicsView
-            self.GV_contour.setViewportUpdateMode(
-                QtWidgets.QGraphicsView.FullViewportUpdate
-            )
-            self.GV_contour.setRenderHints(
-                QtGui.QPainter.Antialiasing |
-                QtGui.QPainter.SmoothPixmapTransform
-            )
-            
+            # Set up GraphicsView
             self.GV_contour.setLayout(layout)
             self.canvas = canvas
             
-            # Make sure the canvas updates properly
-            self.canvas.draw()
+            # Initial resize
+            self.resize_figure_to_view()
+
+    def resize_figure_to_view(self):
+        """Resize the figure to fit the view while maintaining aspect ratio"""
+        if not hasattr(self, 'canvas') or not self.canvas:
+            return
+            
+        if not hasattr(self, 'canvas_original_size'):
+            self.canvas_original_size = self.canvas.size()
+            
+        # Get the current size of the GraphicsView
+        view_size = self.GV_contour.size()
+        
+        # Get the figure size from PLOT_OPTIONS
+        fig_size = PLOT_OPTIONS['graph_option']['figure_size']
+        fig_aspect = fig_size[0] / fig_size[1]
+        
+        # Calculate new size maintaining aspect ratio
+        view_width = view_size.width() - 10  # 여백 고려
+        view_height = view_size.height() - 10  # 여백 고려
+        view_aspect = view_width / view_height
+        
+        if view_aspect > fig_aspect:
+            # View is wider than figure
+            new_height = view_height
+            new_width = int(new_height * fig_aspect)
+        else:
+            # View is taller than figure
+            new_width = view_width
+            new_height = int(new_width / fig_aspect)
+        
+        # Resize the canvas
+        self.canvas.setFixedSize(int(new_width), int(new_height))
+        self.canvas.draw()
 
     def browse_output_dir(self):
         """Open file dialog to browse for output directory"""
@@ -193,6 +234,8 @@ class ContourPlotPage(QtCore.QObject):
 
     def export_data(self):
         """Export contour image and optionally temperature and extracted data to files"""
+        if not hasattr(self, 'canvas_original_size'):
+            self.canvas_original_size = self.canvas.size()
         output_dir = PATH_INFO.get('output_dir') or self.LE_output_dir_2.text().strip()
         if not output_dir:
             QtWidgets.QMessageBox.warning(self.main, "Export", "No output directory selected.")
@@ -209,13 +252,11 @@ class ContourPlotPage(QtCore.QObject):
         if self.PB_export_data_on.isChecked():
             total_files += 1
 
-        # 프로그레스 다이얼로그 생성 (먼저 띄운 후 UI 업데이트)
+        # 프로그레스 다이얼로그 생성
         progress = LoadingDialog(parent=self.main, message="Exporting files...")
         progress.progress.setMaximum(total_files)
         progress.progress.setValue(0)
         progress.show()
-
-        # UI 업데이트 강제 실행 (다이얼로그가 즉시 표시되도록)
         QtWidgets.QApplication.processEvents()
 
         try:
@@ -227,7 +268,16 @@ class ContourPlotPage(QtCore.QObject):
 
             # 1. 컨투어 플롯 이미지 저장
             progress.label.setText("Saving contour plot...")
-            QtWidgets.QApplication.processEvents()  # UI 업데이트
+            QtWidgets.QApplication.processEvents()
+            
+            # 현재 크기 저장
+            current_size = self.canvas.size()
+            
+            # 원본 figure size로 복원
+            fig = self.canvas.figure
+            fig_size = PLOT_OPTIONS['graph_option']['figure_size']
+            fig.set_size_inches(fig_size[0], fig_size[1])
+            
             name_parts = [series]
             if xlim is not None:
                 name_parts.append(f"xlim{str(xlim)}")
@@ -236,7 +286,13 @@ class ContourPlotPage(QtCore.QObject):
             name_parts.append(timestamp)
             filename = "_".join(name_parts) + ".png"
             output_path = os.path.join(output_dir, filename)
-            self.canvas.figure.savefig(output_path, format='png')
+            
+            # 원본 크기와 DPI로 저장
+            fig.savefig(output_path, format='png', dpi=PLOT_OPTIONS['graph_option']['figure_dpi'])
+            
+            # 크기 복원 및 다시 그리기
+            self.canvas.setFixedSize(self.canvas_original_size)
+            self.resize_figure_to_view()
             progress.progress.setValue(1)
 
             # 2. 온도 데이터 저장
@@ -287,7 +343,7 @@ class ContourPlotPage(QtCore.QObject):
             QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
 
     def open_contour_settings(self):
-        """컨투어 설정 다이얼로그 열기: 값이 바뀌면 즉시 plot_contour 재생성 호출"""
+        """컨투어 설정 다이얼로그 열기"""
         self.contour_settings_dialog = ContourSettingsDialog(
             callback=self.create_contour_plot,
             parent=self.main
