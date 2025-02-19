@@ -163,33 +163,55 @@ class SDDPeakTrackingPage(QtCore.QObject):
         """2번 페이지: 컨투어 플롯 및 현재까지의 피크 결과 표시"""
         canvas = plot_contour_with_peaks_gui(self.contour_data, self.tracked_peaks)
         if canvas is None:
-            QtWidgets.QMessageBox.warning(self.main, "Warning", "Could not create contour plot.")
+            QtWidgets.QMessageBox.warning(
+                self.main, 
+                "Warning", 
+                "Could not create contour plot"
+            )
             return
+        
         if hasattr(self.ui, 'QGV_contour'):
             if self.ui.QGV_contour.layout():
                 QtWidgets.QWidget().setLayout(self.ui.QGV_contour.layout())
             layout = QtWidgets.QVBoxLayout()
             layout.addWidget(canvas)
             self.ui.QGV_contour.setLayout(layout)
+        
         self.adjust_canvas = canvas
         self.setup_adjust_interaction()
-        # --- 여기서 버튼 텍스트 결정 ---
-        if len(self.tracked_peaks["Data"]) == (self.max_index + 1):
-            self.ui.L_current_status_2.setText("Peak find Completed")
+
+        # -----------------------------------------------------
+        # ★ 핵심: 찾은 피크 개수 vs 전체 프레임 수 확인
+        # -----------------------------------------------------
+        total_frames = self.max_index + 1
+        found_peaks = len(self.tracked_peaks["Data"])
+
+        if found_peaks == total_frames:
+            # 모든 프레임 처리됨
+            self.ui.L_current_status_2.setText("Peak find Completed")  
+            
+            # Next 버튼 → Adjust specific Peak
             try:
                 self.ui.PB_next.clicked.disconnect()
             except Exception:
                 pass
             self.ui.PB_next.setText("Adjust specific Peak")
             self.ui.PB_next.clicked.connect(self.adjust_specific_peak)
+
+            # Final Apply 버튼 활성화
+            self.ui.PB_final_apply.setEnabled(True)
         else:
+            # 아직 처리되지 않은 프레임이 존재
             self.ui.PB_next.setText("Next")
             try:
                 self.ui.PB_next.clicked.disconnect()
             except Exception:
                 pass
             self.ui.PB_next.clicked.connect(self.retry_current_frame)
+
+            # 중간 단계에서는 Final Apply 버튼 비활성화
             self.ui.PB_final_apply.setEnabled(False)
+
         self.main.ui.stackedWidget.setCurrentIndex(2)
 
     def setup_adjust_interaction(self):

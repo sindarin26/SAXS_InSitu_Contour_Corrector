@@ -1,0 +1,935 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SDD_correction</class>
+ <widget class="QWidget" name="SDD_correction">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1424</width>
+    <height>807</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SDD Correction</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_5">
+   <item>
+    <widget class="QStackedWidget" name="stackedWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="page">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QFrame" name="frame_8">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,1">
+          <item>
+           <widget class="QFrame" name="frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>SDD</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_sdd"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_sdd">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_10">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_11">
+             <item>
+              <widget class="QLabel" name="label_8">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Pixel Size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_pixel_size"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_pixel_size">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_14">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="1,1">
+          <item>
+           <widget class="QFrame" name="frame_15">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_16">
+             <item>
+              <widget class="QLabel" name="label_15">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Image Size X</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_image_size_x"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_image_size_x">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_16">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_17">
+             <item>
+              <widget class="QLabel" name="label_17">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Image Size Y</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_image_size_y"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_image_size_y">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_11">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="1,1">
+          <item>
+           <widget class="QFrame" name="frame_12">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_13">
+             <item>
+              <widget class="QLabel" name="label_10">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Experiment Energy</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_experiment_energy"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_experiment_energy">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_13">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_14">
+             <item>
+              <widget class="QLabel" name="label_13">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Converted Energy</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_converted_energy"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_converted_energy">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_17">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="1,1">
+          <item>
+           <widget class="QFrame" name="frame_9">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <item>
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>638</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_19">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_20">
+             <item>
+              <widget class="QLabel" name="label_21">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>q format</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="CB_q_format">
+               <item>
+                <property name="text">
+                 <string>q</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>CuKalpha</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_3">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,1">
+          <item>
+           <widget class="QFrame" name="frame_2">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Beam center X</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_beam_center_x"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_beam_center_x">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_4">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLabel" name="label_6">
+               <property name="minimumSize">
+                <size>
+                 <width>110</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Beam center Y</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="LE_beam_center_y"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="L_beam_center_y">
+               <property name="text">
+                <string>Current Value</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_5">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_6">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="text">
+                <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_11">
+               <property name="text">
+                <string>9A Beamline, PAL</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="indent">
+                <number>6</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_7">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="PB_quit">
+               <property name="text">
+                <string>Quit</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_next_1">
+               <property name="text">
+                <string>Next</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_2">
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QFrame" name="frame_22">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="L_current_status_1">
+            <property name="font">
+             <font>
+              <pointsize>20</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Current Status</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGraphicsView" name="QGV_qrange"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_18">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_19">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_23">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_23">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_21">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_22">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="PB_back_0">
+               <property name="text">
+                <string>Back</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_apply_qrange">
+               <property name="text">
+                <string>Apply</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_3">
+      <layout class="QVBoxLayout" name="verticalLayout_6">
+       <item>
+        <widget class="QFrame" name="frame_26">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QLabel" name="L_current_status_2">
+            <property name="font">
+             <font>
+              <pointsize>20</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Current Status</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGraphicsView" name="QGV_contour"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_20">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_21">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_24">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_24">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_25">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_25">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="PB_next">
+               <property name="text">
+                <string>Next</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_sdd_correction_start">
+               <property name="text">
+                <string>SDD Correction</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_4">
+      <widget class="QFrame" name="frame_27">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>1376</width>
+         <height>699</height>
+        </rect>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_7">
+        <item>
+         <widget class="QLabel" name="L_current_status_3">
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Current Status</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGraphicsView" name="QGV_final"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QFrame" name="frame_28">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>720</y>
+         <width>1376</width>
+         <height>44</height>
+        </rect>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_26">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QFrame" name="frame_29">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_27">
+           <property name="leftMargin">
+            <number>12</number>
+           </property>
+           <property name="topMargin">
+            <number>12</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="PB_apply_final">
+             <property name="text">
+              <string>Apply</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="frame_30">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_28">
+           <property name="leftMargin">
+            <number>12</number>
+           </property>
+           <property name="topMargin">
+            <number>12</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="PB_back_3">
+             <property name="text">
+              <string>Back</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="PB_final_apply">
+             <property name="text">
+              <string>Apply to Contour Data</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
