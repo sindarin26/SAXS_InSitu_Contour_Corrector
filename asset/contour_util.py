@@ -1317,6 +1317,7 @@ def fit_peak_vs_temp(tracked_peaks, fit_temp_range):
     Perform linear fitting of tracked peak_q vs Temperature for data within fit_temp_range.
     Returns (a, b) where q = a * Temperature + b.
     """
+    print(f"debug: fit_temp_range = {fit_temp_range}")
     temp_array = np.array(tracked_peaks["Time-temp"][1])
     peak_q_array = np.array([entry["peak_q"] for entry in tracked_peaks["Data"]])
     mask = (temp_array >= fit_temp_range[0]) & (temp_array <= fit_temp_range[1])
@@ -1389,6 +1390,8 @@ def main(dat_dir, log_path, original_sdd, image_size, beam_center, pixel_size, e
 
     # 새로운 함수 호출
     tracked_peaks = add_corrected_peak_q(tracked_peaks, fit_params, index_range, original_sdd, experiment_energy, converted_energy)
+
+    print(f"debug: corrected peaks = {tracked_peaks}")
     
     # 결과 확인을 위한 export
     export_tracked_peaks_to_excel_with_correction(tracked_peaks, "tracked_peaks_with_correction.csv")

@@ -49,7 +49,7 @@ class SDDPeakTrackingPage(QtCore.QObject):
         )
         self.ui.PB_apply_qrange.clicked.connect(self.apply_q_range)
         self.ui.PB_next.clicked.connect(self.retry_current_frame)
-        self.ui.PB_final_apply.clicked.connect(self.finalize_peak_tracking)
+        self.ui.PB_sdd_correction_start.clicked.connect(self.finalize_peak_tracking)
 
     def initialize_peak_tracking(self, contour_data):
         """피크 추적 프로세스 초기화 (인덱스 0부터 시작)"""
@@ -331,5 +331,17 @@ class SDDPeakTrackingPage(QtCore.QObject):
         if self.tracked_peaks is None or len(self.tracked_peaks["Data"]) == 0:
             QtWidgets.QMessageBox.warning(self.main, "Warning", "No peaks have been tracked.")
             return
+
+        # 1) frame_index를 기준으로, contour_data["Time-temp"]의 실제 온도값을 꺼내서 갱신
+        times, temps = self.contour_data["Time-temp"]
+        for entry in self.tracked_peaks["Data"]:
+            fidx = entry["frame_index"]
+            # 만약 이미 Temperature가 0이면, or 그냥 무조건 덮어쓸 수도 있음
+            entry["Temperature"] = temps[fidx]  # 실제 온도 리스트에서 가져옴
+
+        # 2) tracked_peaks를 전역 DATA에 반영
         print("Peak tracking completed")
-        print(f"Tracked peaks: {self.tracked_peaks}")
+        DATA['tracked_peaks'] = self.tracked_peaks
+
+        # 3) 디버그 출력
+        print(f"DATA, tracked_peaks: {DATA['tracked_peaks']}")
