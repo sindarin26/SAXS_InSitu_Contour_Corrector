@@ -8,6 +8,8 @@ from asset.contour_settings_dialog import ContourSettingsDialog
 import os
 import datetime
 import pandas as pd
+from asset.contour_page_sdd import SDDCorrectionDialog
+
 
 
 class ContourPlotPage(QtCore.QObject):
@@ -352,5 +354,4 @@ class ContourPlotPage(QtCore.QObject):
 
     def start_sdd_correction(self):
         """Start SDD correction process"""
-        # Implement SDD correction
-        pass
+        SDDCorrectionDialog(self.main).exec_()

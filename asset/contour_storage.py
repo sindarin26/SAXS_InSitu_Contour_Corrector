@@ -1,3 +1,4 @@
+#asset/contour_storage.py
 # Global storage for sharing data between different parts of the application
 DATA = {
     'log_data': None,          # Data from spec log file
