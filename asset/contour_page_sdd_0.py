@@ -57,11 +57,7 @@ class SDDSettingsPage(QtCore.QObject):
         # 콤보박스: q_format 변경 시 처리
         self.ui.CB_q_format.currentIndexChanged.connect(self.q_format_changed)
 
-        # 다음 버튼
-        self.ui.PB_next_1.clicked.connect(
-            lambda: self.main.ui.stackedWidget.setCurrentIndex(1)
-        )
-
+        
     def create_update_callback(self, line_edit, param_name, convert_type):
         """각 QLineEdit에 대해 현재 값을 캡쳐한 콜백 함수 생성"""
         def callback():

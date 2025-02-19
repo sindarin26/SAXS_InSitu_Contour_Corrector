@@ -2,6 +2,8 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtCore
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
 
 class DraggableLine(pg.InfiniteLine):
     """Draggable vertical line with label"""
@@ -251,6 +253,190 @@ class TempCorrectionHelper:
 
         # 5) 라벨 위치는 x좌표 = line.value(), y좌표 = fixed_y (고정)
         line.label.setPos(x_pos, fixed_y)
+
+def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
+    """
+    컨투어 플롯과 피크 위치를 QtGraphics View에 맞게 canvas로 반환하는 함수
+    """
+    default_graph_option = {
+        "figure_size": (12, 8),
+        "figure_dpi": 200,
+        "contour_levels": 100,
+        "contour_cmap": "inferno",
+        "contour_lower_percentile": 0.1,
+        "contour_upper_percentile": 98,
+        "contour_xlabel_text": "2theta (Cu K-alpha)",
+        "contour_ylabel_text": "Elapsed Time",
+        "global_ylim": None,
+        "contour_xlim": None,
+    }
+    if graph_option is None:
+        graph_option = {}
+    final_opt = {**default_graph_option, **graph_option}
+
+    # 원래 plot_contour_with_peaks 로직과 동일
+    times, _ = contour_data["Time-temp"]
+    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
+    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
+    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
+    time_common = np.unique(time_all)
+    grid_q, grid_time = np.meshgrid(q_common, time_common)
+    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
+    
+    if grid_intensity is None or np.isnan(grid_intensity).all():
+        print("Warning: All interpolated intensity values are NaN. Check input data.")
+        return None
+
+    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
+    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
+
+    fig, ax = plt.subplots(figsize=final_opt["figure_size"], dpi=final_opt["figure_dpi"])
+    cp = ax.contourf(grid_q, grid_time, grid_intensity,
+                     levels=final_opt["contour_levels"],
+                     cmap=final_opt["contour_cmap"],
+                     vmin=lower_bound,
+                     vmax=upper_bound)
+    
+    if final_opt["contour_xlim"] is not None:
+        ax.set_xlim(final_opt["contour_xlim"])
+    if final_opt["global_ylim"] is not None:
+        ax.set_ylim(final_opt["global_ylim"])
+    
+    ax.set_xlabel(final_opt["contour_xlabel_text"], fontsize=14, fontweight='bold')
+    ax.set_ylabel(final_opt["contour_ylabel_text"], fontsize=14, fontweight='bold')
+    ax.set_title("Contour Plot with Peak Positions", fontsize=16, fontweight='bold')
+    ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+    
+    added_label = False
+    for entry in tracked_peaks["Data"]:
+        peak_q = entry.get("peak_q")
+        time_val = entry.get("Time")
+        if peak_q is not None and not np.isnan(peak_q):
+            if not added_label:
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, label="Peak Position", zorder=10)
+                added_label = True
+            else:
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, zorder=10)
+    
+    ax.legend()
+    
+    # QtGraphics 호환을 위해 canvas로 변환
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    return canvas
+
+class QRangeCorrectionHelper:
+    """Q 범위 선택을 위한 헬퍼 클래스"""
+    def __init__(self, plot_widget):
+        self.plot_widget = plot_widget
+        self.q_data = None
+        self.intensity_data = None
+        self.selection_lines = []
+        
+    def set_data(self, q_data, intensity_data):
+        """데이터 설정"""
+        # 입력 데이터를 NumPy 배열로 명시적 변환
+        self.q_data = np.array(q_data)
+        self.intensity_data = np.array(intensity_data)
+        self.plot_data()
+        
+    def plot_data(self):
+        """데이터 플롯"""
+        if self.q_data is None or self.intensity_data is None:
+            return
+        
+        self.plot_widget.clear()
+        self.plot_widget.plot(
+            self.q_data, 
+            self.intensity_data,
+            pen=pg.mkPen(color='k', width=1),
+            symbol='o',
+            symbolSize=5,
+            symbolPen=pg.mkPen('k'),
+            symbolBrush=pg.mkBrush('w')
+        )
+        
+    def add_selection_lines(self):
+        """선택 라인 추가"""
+        if self.q_data is None:
+            return
+        
+        self.plot_widget.clear()
+        self.plot_data()
+        
+        # y좌표를 어느 정도 위로 설정 (라벨을 보기 좋게)
+        y_offset = (np.max(self.intensity_data) - np.min(self.intensity_data)) * 0.1
+        label_ypos = np.max(self.intensity_data) + y_offset
+        
+        # 두 개의 선택 라인 생성
+        pos1, pos2 = self.q_data[len(self.q_data)//4], self.q_data[len(self.q_data)*3//4]
+        
+        line1 = DraggableLine(pos=pos1, bounds=(min(self.q_data), max(self.q_data)))
+        line2 = DraggableLine(pos=pos2, bounds=(min(self.q_data), max(self.q_data)))
+        
+        line1.setPen(pg.mkPen(color='b', width=1.5))
+        line2.setPen(pg.mkPen(color='b', width=1.5))
+        
+        # 라벨 생성
+        label1 = pg.TextItem(color=(0, 0, 0))
+        label2 = pg.TextItem(color=(0, 0, 0))
+        
+        # 라벨 위치 설정
+        label1.setPos(pos1, label_ypos)
+        label2.setPos(pos2, label_ypos)
+        
+        # 라인에 라벨 연결
+        line1.set_label(label1)
+        line2.set_label(label2)
+        
+        # 라인 이동 시 라벨 업데이트 시그널 연결
+        line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
+        line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+        
+        # 초기 라벨 업데이트
+        self.update_line_label(line1, "Start", label_ypos)
+        self.update_line_label(line2, "End", label_ypos)
+        
+        # 플롯에 추가
+        self.plot_widget.addItem(line1)
+        self.plot_widget.addItem(line2)
+        self.plot_widget.addItem(label1)
+        self.plot_widget.addItem(label2)
+        
+        self.selection_lines = [line1, line2]
+        
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+    
+    def update_line_label(self, line, prefix, fixed_y):
+        """라인 라벨 업데이트"""
+        if self.q_data is None:
+            return
+        
+        # 현재 라인 x좌표(=q값) 가져오기
+        x_pos = line.value()
+        
+        # 가장 가까운 인덱스 찾기
+        idx = np.abs(self.q_data - x_pos).argmin()
+        
+        # 해당 인덱스의 q값과 intensity 찾기
+        q_val = self.q_data[idx]
+        intensity_val = self.intensity_data[idx]
+        
+        # 라벨 텍스트 갱신
+        line.label.setText(f"{prefix}\n(q = {q_val:.4f}, I = {intensity_val:.4f})")
+        
+        # 라벨 위치는 x좌표 = line.value(), y좌표 = fixed_y (고정)
+        line.label.setPos(x_pos, fixed_y)
+    
+    def get_q_range(self):
+        """선택된 q 범위 반환"""
+        if len(self.selection_lines) == 2:
+            q1 = self.selection_lines[0].value()
+            q2 = self.selection_lines[1].value()
+            return (min(q1, q2), max(q1, q2))
+        return None
 
 def create_plot_widget():
     """Create a preconfigured plot widget"""
