@@ -438,6 +438,215 @@ class QRangeCorrectionHelper:
             return (min(q1, q2), max(q1, q2))
         return None
 
+# In contour_util_gui.py, add:
+
+class IndexRangeSelectionHelper:
+    """Helper class for index range selection"""
+    def __init__(self, plot_widget):
+        self.plot_widget = plot_widget
+        self.temp_data = None
+        self.index_lines = []
+        
+    def set_data(self, temp_data):
+        """Set temperature data"""
+        self.temp_data = temp_data
+        self.plot_data()
+        
+    def plot_data(self):
+        """Plot temperature vs index data"""
+        if self.temp_data is None:
+            return
+            
+        self.plot_widget.clear()
+        indices = np.arange(len(self.temp_data))
+        self.plot_widget.plot(
+            indices, 
+            self.temp_data,
+            pen=pg.mkPen(color='k', width=1),
+            symbol='o',
+            symbolSize=5,
+            symbolPen=pg.mkPen('k'),
+            symbolBrush=pg.mkBrush('w')
+        )
+        
+    def add_selection_lines(self):
+        """Add vertical lines for selection"""
+        if self.temp_data is None:
+            return
+
+        # Plot data
+        self.plot_widget.clear()
+        indices = np.arange(len(self.temp_data))
+        self.plot_widget.plot(
+            indices, 
+            self.temp_data,
+            pen=pg.mkPen(color='k', width=1),
+            symbol='o',
+            symbolSize=5,
+            symbolPen=pg.mkPen('k'),
+            symbolBrush=pg.mkBrush('w')
+        )
+
+        # y offset for labels
+        y_offset = (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
+        label_ypos = np.max(self.temp_data) + y_offset
+
+        # Add selection lines
+        pos1, pos2 = len(indices)//4, len(indices)*3//4
+        
+        line1 = DraggableLine(pos=pos1, bounds=(0, len(indices)-1))
+        line2 = DraggableLine(pos=pos2, bounds=(0, len(indices)-1))
+        
+        line1.setPen(pg.mkPen(color='b', width=1.5))
+        line2.setPen(pg.mkPen(color='b', width=1.5))
+
+        # Create labels
+        label1 = pg.TextItem(color=(0, 0, 0))
+        label2 = pg.TextItem(color=(0, 0, 0))
+        
+        label1.setPos(pos1, label_ypos)
+        label2.setPos(pos2, label_ypos)
+        
+        line1.set_label(label1)
+        line2.set_label(label2)
+        
+        line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
+        line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+        
+        self.update_line_label(line1, "Start", label_ypos)
+        self.update_line_label(line2, "End", label_ypos)
+        
+        self.plot_widget.addItem(line1)
+        self.plot_widget.addItem(line2)
+        self.plot_widget.addItem(label1)
+        self.plot_widget.addItem(label2)
+        
+        self.index_lines = [line1, line2]
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        
+    def update_line_label(self, line, prefix, fixed_y):
+        """Update label text and position"""
+        if self.temp_data is None:
+            return
+            
+        x_pos = line.value()
+        idx = int(round(x_pos))
+        if idx < 0:
+            idx = 0
+        elif idx >= len(self.temp_data):
+            idx = len(self.temp_data) - 1
+            
+        temp_val = self.temp_data[idx]
+        line.label.setText(f"{prefix}\n(Index: {idx}, {temp_val:.2f}°C)")
+        line.label.setPos(x_pos, fixed_y)
+        
+    def get_index_range(self):
+        """Return selected index range"""
+        if len(self.index_lines) == 2:
+            start = int(self.index_lines[0].value())
+            end = int(self.index_lines[1].value())
+            return (min(start, end), max(start, end))
+        return None
+
+class PeakTempRangeHelper:
+    """Helper class for temperature range selection in peak fitting"""
+    def __init__(self, plot_widget):
+        self.plot_widget = plot_widget
+        self.temp_data = None
+        self.peak_q_data = None
+        self.temp_lines = []
+        
+    def set_data(self, temp_data, peak_q_data):
+        """Set temperature and peak q data"""
+        self.temp_data = temp_data
+        self.peak_q_data = peak_q_data
+        self.plot_data()
+        
+    def plot_data(self):
+        """Plot peak q vs temperature data"""
+        if self.temp_data is None or self.peak_q_data is None:
+            return
+            
+        self.plot_widget.clear()
+        self.plot_widget.plot(
+            self.temp_data, 
+            self.peak_q_data,
+            pen=pg.mkPen(color='k', width=1),
+            symbol='o',
+            symbolSize=5,
+            symbolPen=pg.mkPen('k'),
+            symbolBrush=pg.mkBrush('w')
+        )
+        
+    def add_selection_lines(self):
+        """Add vertical lines for temperature range selection"""
+        if self.temp_data is None or self.peak_q_data is None:
+            return
+
+        self.plot_widget.clear()
+        self.plot_widget.plot(
+            self.temp_data, 
+            self.peak_q_data,
+            pen=pg.mkPen(color='k', width=1),
+            symbol='o',
+            symbolSize=5,
+            symbolPen=pg.mkPen('k'),
+            symbolBrush=pg.mkBrush('w')
+        )
+
+        y_offset = (np.max(self.peak_q_data) - np.min(self.peak_q_data)) * 0.1
+        label_ypos = np.max(self.peak_q_data) + y_offset
+
+        min_temp, max_temp = np.min(self.temp_data), np.max(self.temp_data)
+        pos1 = min_temp + (max_temp - min_temp) / 4
+        pos2 = min_temp + 3 * (max_temp - min_temp) / 4
+        
+        line1 = DraggableLine(pos=pos1, bounds=(min_temp, max_temp))
+        line2 = DraggableLine(pos=pos2, bounds=(min_temp, max_temp))
+        
+        line1.setPen(pg.mkPen(color='r', width=1.5))
+        line2.setPen(pg.mkPen(color='r', width=1.5))
+
+        label1 = pg.TextItem(color=(0, 0, 0))
+        label2 = pg.TextItem(color=(0, 0, 0))
+        
+        label1.setPos(pos1, label_ypos)
+        label2.setPos(pos2, label_ypos)
+        
+        line1.set_label(label1)
+        line2.set_label(label2)
+        
+        line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
+        line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+        
+        self.update_line_label(line1, "Start", label_ypos)
+        self.update_line_label(line2, "End", label_ypos)
+        
+        self.plot_widget.addItem(line1)
+        self.plot_widget.addItem(line2)
+        self.plot_widget.addItem(label1)
+        self.plot_widget.addItem(label2)
+        
+        self.temp_lines = [line1, line2]
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        
+    def update_line_label(self, line, prefix, fixed_y):
+        """Update label text and position"""
+        if self.temp_data is None:
+            return
+            
+        x_pos = line.value()
+        line.label.setText(f"{prefix}\nTemp: {x_pos:.2f}°C")
+        line.label.setPos(x_pos, fixed_y)
+        
+    def get_temp_range(self):
+        """Return selected temperature range"""
+        if len(self.temp_lines) == 2:
+            temp1 = self.temp_lines[0].value()
+            temp2 = self.temp_lines[1].value()
+            return (min(temp1, temp2), max(temp1, temp2))
+        return None
+
 def create_plot_widget():
     """Create a preconfigured plot widget"""
     plot = pg.PlotWidget()
