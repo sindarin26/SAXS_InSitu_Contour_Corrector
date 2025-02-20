@@ -4,7 +4,7 @@ import numpy as np
 import pyqtgraph as pg
 from asset.contour_storage import DATA, PARAMS
 from asset.contour_util_gui import QRangeCorrectionHelper, plot_contour_with_peaks_gui 
-from asset.contour_util import find_peak
+from asset.fitting_util import find_peak
 
 class SDDPeakTrackingPage(QtCore.QObject):
     def __init__(self, main_dialog):

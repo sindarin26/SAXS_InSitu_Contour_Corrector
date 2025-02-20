@@ -123,17 +123,45 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             layout.addWidget(container)
             return widget
 
-        # 폰트 옵션: key가 "font_"로 시작하면 콤보박스 (현재 시스템에 설치된 폰트 목록도 확인)
+        # 폰트 옵션: key가 "font_"로 시작하면 FontComboBox 사용
         elif key.startswith("font_"):
-            input_widget = QtWidgets.QComboBox()
-            # 기본적으로 Times New Roman, Segoe UI 제공 (추후 추가하기 쉽게)
-            input_widget.addItems(["Times New Roman", "Segoe UI"])
-            current_font = value if value in ["Times New Roman", "Segoe UI"] else "Times New Roman"
-            input_widget.setCurrentText(current_font)
-            input_widget.previous_font = current_font  # 이전 선택 폰트 저장
-            input_widget.currentIndexChanged.connect(
-                lambda idx, k=key, pk=parent_key, w=input_widget: self.on_font_changed(k, pk, w)
-            )
+            input_widget = QtWidgets.QFontComboBox()
+            # 일반적으로 사용되는 폰트만 표시
+            input_widget.setFontFilters(QtWidgets.QFontComboBox.ScalableFonts)
+            
+            # writingSystem 설정으로 호환성 확보
+            input_widget.setWritingSystem(QtGui.QFontDatabase.Latin)
+            
+            # 현재 폰트 설정
+            try:
+                current_font = QtGui.QFont(value)
+                if current_font.exactMatch():
+                    input_widget.setCurrentFont(current_font)
+                else:
+                    # 폰트가 없으면 기본값으로 Times New Roman 사용
+                    input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
+            except Exception:
+                # 오류 발생 시 기본값 사용
+                input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
+            
+            def font_changed():
+                """폰트 변경 시 호출되는 콜백"""
+                try:
+                    font_family = input_widget.currentFont().family()
+                    if parent_key:
+                        PLOT_OPTIONS[parent_key][key] = font_family
+                    else:
+                        PLOT_OPTIONS[key] = font_family
+                    if self.callback:
+                        self.callback()
+                except Exception as e:
+                    print(f"Font change error: {str(e)}")
+                    # 오류 발생 시 기본값으로 복구
+                    input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
+            
+            input_widget.currentFontChanged.connect(lambda _: font_changed())
+
+
         # 불리언 값인 경우
         elif isinstance(value, bool):
             input_widget = QtWidgets.QComboBox()
@@ -264,20 +292,20 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         if self.callback:
             self.callback()
 
-    def on_font_changed(self, key, parent_key, widget):
-        selected_font = widget.currentText()
-        available_fonts = QtGui.QFontDatabase().families()
-        if selected_font not in available_fonts:
-            widget.blockSignals(True)
-            widget.setCurrentText(widget.previous_font)
-            widget.blockSignals(False)
-            QtWidgets.QMessageBox.warning(self, "Font Warning",
-                                          f"'{selected_font}' is not available on this system.\nReverting to previous font.")
-            return
-        widget.previous_font = selected_font
-        if parent_key:
-            PLOT_OPTIONS[parent_key][key] = selected_font
-        else:
-            PLOT_OPTIONS[key] = selected_font
-        if self.callback:
-            self.callback()
+    # def on_font_changed(self, key, parent_key, widget):
+    #     selected_font = widget.currentText()
+    #     available_fonts = QtGui.QFontDatabase().families()
+    #     if selected_font not in available_fonts:
+    #         widget.blockSignals(True)
+    #         widget.setCurrentText(widget.previous_font)
+    #         widget.blockSignals(False)
+    #         QtWidgets.QMessageBox.warning(self, "Font Warning",
+    #                                       f"'{selected_font}' is not available on this system.\nReverting to previous font.")
+    #         return
+    #     widget.previous_font = selected_font
+    #     if parent_key:
+    #         PLOT_OPTIONS[parent_key][key] = selected_font
+    #     else:
+    #         PLOT_OPTIONS[key] = selected_font
+    #     if self.callback:
+    #         self.callback()

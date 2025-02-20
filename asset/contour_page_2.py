@@ -29,6 +29,8 @@ class ContourPlotPage(QtCore.QObject):
         # 추가: 온도, 데이터 내보내기 토글 버튼
         self.PB_export_temp_on = self.main.ui.PB_export_temp_on
         self.PB_export_data_on = self.main.ui.PB_export_data_on
+
+        self.PB_open_output_folder = self.main.ui.PB_open_output_folder
         
         # Setup output directory widgets
         self.setup_output_widgets()
@@ -78,6 +80,8 @@ class ContourPlotPage(QtCore.QObject):
         self.PB_output_browse_2.clicked.connect(self.browse_output_dir)
         self.PB_output_apply_2.clicked.connect(self.apply_output_dir)
         self.LE_output_dir_2.returnPressed.connect(self.apply_output_dir)
+
+        self.PB_open_output_folder.clicked.connect(self.open_output_folder)
 
     def on_page_entered(self):
         """Handle initial setup when page is displayed"""
@@ -355,3 +359,24 @@ class ContourPlotPage(QtCore.QObject):
     def start_sdd_correction(self):
         """Start SDD correction process"""
         SDDCorrectionDialog(self.main).exec_()
+
+    def open_output_folder(self):
+        """Open the current output folder in file explorer"""
+        output_dir = self.L_current_output_dir.text()
+        if output_dir:
+            import os
+            try:
+                if os.name == 'nt':  # Windows
+                    os.startfile(output_dir)
+                elif os.name == 'posix':  # macOS and Linux
+                    import subprocess
+                    if os.path.exists('/usr/bin/open'):  # macOS
+                        subprocess.run(['open', output_dir])
+                    else:  # Linux
+                        subprocess.run(['xdg-open', output_dir])
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "Error",
+                    f"Failed to open output folder:\n{str(e)}"
+                )

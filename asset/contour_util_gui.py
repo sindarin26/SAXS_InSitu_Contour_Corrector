@@ -1,9 +1,11 @@
 #asset.contour_util_gui.py
 import numpy as np
 import pyqtgraph as pg
-from PyQt5 import QtCore
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import matplotlib.pyplot as plt
+import numpy as np
 
 class DraggableLine(pg.InfiniteLine):
     """Draggable vertical line with label"""
@@ -256,17 +258,17 @@ class TempCorrectionHelper:
 
 def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     """
-    컨투어 플롯과 피크 위치를 QtGraphics View에 맞게 canvas로 반환하는 함수
+    컨투어 플롯과 피크 위치를 QtGraphics View에 맞게 canvas로 반환하는 함수.
+    피크는 시간 순서대로 선으로 연결되어 표시됨.
     """
+    
     default_graph_option = {
         "figure_size": (12, 8),
-        "figure_dpi": 200,
-        "contour_levels": 100,
+        "figure_dpi": 150,
+        "contour_levels": 200,
         "contour_cmap": "inferno",
         "contour_lower_percentile": 0.1,
         "contour_upper_percentile": 98,
-        "contour_xlabel_text": "2theta (Cu K-alpha)",
-        "contour_ylabel_text": "Elapsed Time",
         "global_ylim": None,
         "contour_xlim": None,
     }
@@ -274,11 +276,12 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
         graph_option = {}
     final_opt = {**default_graph_option, **graph_option}
 
-    # 원래 plot_contour_with_peaks 로직과 동일
+    # Prepare contour data
     times, _ = contour_data["Time-temp"]
     q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
     intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
     time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    
     q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
     time_common = np.unique(time_all)
     grid_q, grid_time = np.meshgrid(q_common, time_common)
@@ -291,6 +294,7 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
     upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
 
+    # Create figure and plot contour
     fig, ax = plt.subplots(figsize=final_opt["figure_size"], dpi=final_opt["figure_dpi"])
     cp = ax.contourf(grid_q, grid_time, grid_intensity,
                      levels=final_opt["contour_levels"],
@@ -298,31 +302,35 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
                      vmin=lower_bound,
                      vmax=upper_bound)
     
+    # Set limits if provided
     if final_opt["contour_xlim"] is not None:
         ax.set_xlim(final_opt["contour_xlim"])
     if final_opt["global_ylim"] is not None:
         ax.set_ylim(final_opt["global_ylim"])
     
-    ax.set_xlabel(final_opt["contour_xlabel_text"], fontsize=14, fontweight='bold')
-    ax.set_ylabel(final_opt["contour_ylabel_text"], fontsize=14, fontweight='bold')
+    # Set labels and title
     ax.set_title("Contour Plot with Peak Positions", fontsize=16, fontweight='bold')
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
     
-    added_label = False
+    # Plot peaks as a line
+    peak_data = []
     for entry in tracked_peaks["Data"]:
         peak_q = entry.get("peak_q")
         time_val = entry.get("Time")
         if peak_q is not None and not np.isnan(peak_q):
-            if not added_label:
-                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, label="Peak Position", zorder=10)
-                added_label = True
-            else:
-                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, zorder=10)
+            peak_data.append((peak_q, time_val))
+    
+    if peak_data:
+        # Sort by time to ensure proper line order
+        peak_data.sort(key=lambda x: x[1])
+        peak_q_vals, peak_times = zip(*peak_data)
+        
+        # Plot line connecting peaks
+        ax.plot(peak_q_vals, peak_times, 'b-', linewidth=1.5, label='Peak Trajectory', zorder=10)
     
     ax.legend()
     
-    # QtGraphics 호환을 위해 canvas로 변환
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    # Convert to canvas for Qt
     canvas = FigureCanvas(fig)
     canvas.draw()
     return canvas
