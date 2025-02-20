@@ -4,7 +4,7 @@ import numpy as np
 from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS, PATH_INFO
 from asset.contour_util_gui import IndexRangeSelectionHelper, PeakTempRangeHelper
 from asset.contour_util import (plot_contour, fit_peak_vs_temp, calculate_corrected_sdd)
-from asset.contour_util import theta_to_q, q_to_2theta
+from asset.contour_util import theta_to_q, q_to_2theta, calculate_corrected_sdd
 import pyqtgraph as pg
 import traceback
 import copy
@@ -176,7 +176,6 @@ class SDDFittingPage(QtCore.QObject):
 
     def calculate_corrected_sdd(self, original_q, original_sdd, corrected_q, exp_energy, converted_energy):
         """Calculate corrected SDD for a single point"""
-        from asset.contour_util import calculate_corrected_sdd
         return round(calculate_corrected_sdd(
             original_q, original_sdd, corrected_q,
             exp_energy, converted_energy
