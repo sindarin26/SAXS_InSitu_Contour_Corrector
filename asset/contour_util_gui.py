@@ -6,6 +6,7 @@ from scipy.interpolate import griddata
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
+from asset.contour_storage import PLOT_OPTIONS
 
 class DraggableLine(pg.InfiniteLine):
     """Draggable vertical line with label"""
@@ -263,14 +264,14 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     """
     
     default_graph_option = {
-        "figure_size": (12, 8),
+        "figure_size": PLOT_OPTIONS["graph_option"]["figure_size"],
         "figure_dpi": 150,
-        "contour_levels": 200,
-        "contour_cmap": "inferno",
-        "contour_lower_percentile": 0.1,
-        "contour_upper_percentile": 98,
-        "global_ylim": None,
-        "contour_xlim": None,
+        "contour_levels": PLOT_OPTIONS["graph_option"]["contour_levels"],
+        "contour_cmap": PLOT_OPTIONS["graph_option"]["contour_cmap"],
+        "contour_lower_percentile": PLOT_OPTIONS["graph_option"]["contour_lower_percentile"],
+        "contour_upper_percentile": PLOT_OPTIONS["graph_option"]["contour_upper_percentile"],
+        "global_ylim": PLOT_OPTIONS["graph_option"]["global_ylim"],
+        "contour_xlim": PLOT_OPTIONS["graph_option"]["contour_xlim"]
     }
     if graph_option is None:
         graph_option = {}
