@@ -28,6 +28,25 @@ PARAMS = {
     'fitting_model': 'gaussian',
 }
 
+FITTING_THRESHOLD = {
+    # Traditional q threshold (enabled by default)
+    'use_basic_q_threshold': True,
+    'q_threshold': 0.1,            # q threshold as fraction of previous peak
+    
+    # Intensity threshold (enabled by default)
+    'use_intensity_threshold': True,
+    'intensity_threshold': 0.5,    # intensity threshold as fraction of previous peak
+    
+    # FWHM-based q threshold (new)
+    'use_fwhm_q_threshold': True,
+    'fwhm_q_factor': 0.5,         # α value: Δq_threshold = α × FWHM
+    
+    # FWHM comparison threshold (new)
+    'use_fwhm_comparison': True,
+    'fwhm_change_threshold': 0.3   # β value: |FWHM_new - FWHM_old|/FWHM_old < β
+}
+
+
 # Plot options
 PLOT_OPTIONS = {
     'temp': True,

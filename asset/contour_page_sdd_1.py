@@ -2,7 +2,7 @@
 from PyQt5 import QtWidgets, QtCore
 import numpy as np
 import pyqtgraph as pg
-from asset.contour_storage import DATA, PARAMS
+from asset.contour_storage import DATA, PARAMS, FITTING_THRESHOLD
 from asset.contour_util_gui import QRangeCorrectionHelper, plot_contour_with_peaks_gui 
 from asset.fitting_util import find_peak
 
@@ -107,24 +107,26 @@ class SDDPeakTrackingPage(QtCore.QObject):
                 Index_number=self.current_index, 
                 input_range=self.global_q_range,
                 peak_info=None,
-                fitting_function=fitting_model
+                fitting_function=fitting_model,
+                threshold_config=FITTING_THRESHOLD
             )
             
-            if result is None:
+            if isinstance(result, str):
                 self.peak_found = False
                 self.ui.L_current_status_2.setText(
-                    f"Peak not found for frame {self.current_index}. Please adjust q range."
+                    f"Peak not found for frame {self.current_index}: {result}. Please adjust q range."
                 )
             else:
                 self.peak_found = True
-                peak_q, peak_intensity, _ = result
+                peak_q, peak_intensity, _, fwhm = result  # Now unpacking 4 values
                 current_entry = self.contour_data['Data'][self.current_index]
                 new_result = {
                     "frame_index": self.current_index,
                     "Time": current_entry["Time"],
                     "Temperature": current_entry.get("Temperature", 0),
                     "peak_q": peak_q,
-                    "peak_Intensity": peak_intensity
+                    "peak_Intensity": peak_intensity,
+                    "fwhm": fwhm  # Adding FWHM to the tracked data
                 }
                 self.tracked_peaks["Data"].append(new_result)
                 self.tracked_peaks["Data"].sort(key=lambda x: x["frame_index"])
@@ -133,7 +135,6 @@ class SDDPeakTrackingPage(QtCore.QObject):
             self.show_contour_page()
         else:
             self.run_automatic_tracking()
-
 
     def run_automatic_tracking(self):
         """Automatic peak tracking with selected fitting model"""
@@ -146,25 +147,27 @@ class SDDPeakTrackingPage(QtCore.QObject):
                     Index_number=self.current_index, 
                     input_range=self.global_q_range,
                     peak_info=None,
-                    fitting_function=fitting_model
+                    fitting_function=fitting_model,
+                    threshold_config=FITTING_THRESHOLD
                 )
                 
-                if result is None:
+                if isinstance(result, str):
                     self.peak_found = False
                     self.ui.L_current_status_2.setText(
-                        f"Peak not found for frame {self.current_index}. Please adjust q range."
+                        f"Peak not found for frame {self.current_index}: {result}. Please adjust q range."
                     )
                     break
                 else:
                     self.peak_found = True
-                    peak_q, peak_intensity, _ = result
+                    peak_q, peak_intensity, _, fwhm = result  # Now unpacking 4 values
                     current_entry = self.contour_data['Data'][self.current_index]
                     self.tracked_peaks["Data"].append({
                         "frame_index": self.current_index,
                         "Time": current_entry["Time"],
                         "Temperature": current_entry.get("Temperature", 0),
                         "peak_q": peak_q,
-                        "peak_Intensity": peak_intensity
+                        "peak_Intensity": peak_intensity,
+                        "fwhm": fwhm  # Adding FWHM to the tracked data
                     })
                     self.current_index += 1
                     
@@ -178,7 +181,6 @@ class SDDPeakTrackingPage(QtCore.QObject):
                 "Error",
                 f"Error during automatic tracking:\n{str(e)}"
             )
-
 
     def show_contour_page(self):
             """2번 페이지: 컨투어 플롯 및 현재까지의 피크 결과 표시"""

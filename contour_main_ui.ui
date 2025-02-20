@@ -667,6 +667,25 @@
                </widget>
               </item>
               <item>
+               <widget class="QFrame" name="frame_37">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_12">
+                 <item>
+                  <widget class="QPushButton" name="PB_peak_export">
+                   <property name="text">
+                    <string>Peak Export</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <widget class="QFrame" name="frame_29">
                 <property name="frameShape">
                  <enum>QFrame::StyledPanel</enum>
@@ -678,7 +697,7 @@
                  <item>
                   <widget class="QPushButton" name="PB_export">
                    <property name="text">
-                    <string>Export</string>
+                    <string>Contour Export</string>
                    </property>
                   </widget>
                  </item>

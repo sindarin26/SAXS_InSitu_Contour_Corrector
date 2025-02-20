@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from asset.contour_storage import FITTING_THRESHOLD
 
 def gaussian(x, a, mu, sigma, offset):
     """
@@ -63,39 +64,34 @@ def voigt(x, a, mu, sigma, gamma, offset):
     z = (x - mu + 1j*gamma) / (sigma * np.sqrt(2))
     return a * voigt_profile(x - mu, sigma, gamma) + offset
 
-def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None, fitting_function="gaussian"):
+def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None, 
+             fitting_function="gaussian", threshold_config=None):
     """
-    주어진 contour_data의 Index_number 데이터에서, input_range 내의 q, Intensity 데이터를
-    대상으로 피팅을 수행하여 peak의 q 위치와 intensity를 구하고,
-    input_range의 중심을 기준으로 출력 range를 반환.
+    Find peak in the given data range using specified fitting function and thresholds.
     
-    Parameters
-    ----------
-    contour_data : dict
-        Contour plot data
-    Index_number : int
-        Index of the data point to analyze
-    input_range : tuple
-        (min, max) range for fitting
-    peak_info : dict
-        Previous peak information for validation
-    fitting_function : str
-        Type of fitting function to use ("gaussian", "lorentzian", or "voigt")
+    Returns
+    -------
+    tuple or str
+        If successful: (peak_q, peak_intensity, output_range, fwhm)
+        If failed: Error message string explaining the failure reason
     """
+    if threshold_config is None:
+        threshold_config = FITTING_THRESHOLD
+
     if input_range is None:
-        raise ValueError("input_range must be provided.")
+        return "No input range provided"
+        
     try:
         data_entry = contour_data["Data"][Index_number]
     except IndexError:
-        raise ValueError(f"Index {Index_number} is out of range for contour_data.")
+        return f"Index {Index_number} is out of range for contour_data"
     
     q_arr = np.array(data_entry["q"])
     intensity_arr = np.array(data_entry["Intensity"])
     mask = (q_arr >= input_range[0]) & (q_arr <= input_range[1])
     
     if not np.any(mask):
-        print("No data points found within the specified input_range.")
-        return None
+        return "No data points found within the specified input range"
         
     q_subset = q_arr[mask]
     intensity_subset = intensity_arr[mask]
@@ -130,10 +126,9 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None, fi
     try:
         popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0)
     except Exception as e:
-        print(f"Fitting failed with {fitting_function}:", e)
-        return None
+        return f"Fitting failed with {fitting_function}: {str(e)}"
     
-    # Extract peak position based on fitting function
+    # Get peak position and intensity
     if fitting_function.lower() == "lorentzian":
         peak_q = popt[1]  # x0 parameter
     elif fitting_function.lower() == "voigt":
@@ -143,35 +138,99 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None, fi
     
     peak_intensity = fit_func(peak_q, *popt)
     
+    # Calculate FWHM
+    fwhm = calculate_fwhm(q_subset, intensity_subset, peak_q, fitting_function, popt)
+    
+    # Threshold checks
+    if Index_number > 0 and peak_info is not None:
+        error_msg = check_peak_thresholds(
+            peak_q, peak_intensity, fwhm,
+            {'peak_q': peak_info.get('peak_q'),
+             'peak_intensity': peak_info.get('peak_intensity'),
+             'fwhm': peak_info.get('fwhm')},
+            threshold_config
+        )
+        if error_msg:
+            return error_msg
+    
     # Calculate output range
     center = (input_range[0] + input_range[1]) / 2.0
     shift = peak_q - center
     output_range = (input_range[0] + shift, input_range[1] + shift)
     
-    # Validation against previous peak if available
-    if Index_number > 0 and peak_info is not None:
-        if peak_info.get("q_threshold") is None:
-            prev_peak_q = peak_info.get("peak_q")
-            if prev_peak_q is None:
-                print("Previous peak_q is missing in peak_info.")
-            else:
-                peak_info["q_threshold"] = 1 if prev_peak_q >= 3 else 0.1
-                
-        q_threshold = peak_info.get("q_threshold", 0.1)
+    return peak_q, peak_intensity, output_range, fwhm
+
+
+def calculate_fwhm(x, y, peak_pos, fitting_function, popt):
+    """Calculate FWHM based on fitting function and parameters"""
+    if fitting_function == "gaussian":
+        a, mu, sigma, offset = popt
+        fwhm = 2.355 * sigma  # 2.355 = 2*sqrt(2*ln(2))
+    elif fitting_function == "lorentzian":
+        a, x0, gamma, offset = popt
+        fwhm = 2 * gamma  # FWHM = 2γ for Lorentzian
+    elif fitting_function == "voigt":
+        a, mu, sigma, gamma, offset = popt
+        # Approximation for Voigt FWHM
+        # From: https://en.wikipedia.org/wiki/Voigt_profile#The_width_of_the_Voigt_profile
+        fG = 2.355 * sigma
+        fL = 2 * gamma
+        fwhm = 0.5346 * fL + np.sqrt(0.2166 * fL**2 + fG**2)
+    else:
+        raise ValueError(f"Unknown fitting function: {fitting_function}")
+    
+    return fwhm
+
+def check_peak_thresholds(peak_q, peak_intensity, fwhm, prev_info, threshold_config):
+    """
+    Check all thresholds and return None if passed, or error message if failed
+    
+    Parameters
+    ----------
+    peak_q : float
+        Current peak q position
+    peak_intensity : float
+        Current peak intensity
+    fwhm : float
+        Current peak FWHM
+    prev_info : dict
+        Previous peak information including q, intensity, and FWHM
+    threshold_config : dict
+        Threshold configuration dictionary
         
-        if peak_info.get("intensity_threshold") is None:
-            peak_info["intensity_threshold"] = 0.5
-        intensity_threshold = peak_info.get("intensity_threshold", 0.5)
+    Returns
+    -------
+    str or None
+        Error message if any threshold is exceeded, None if all checks pass
+    """
+    if not prev_info:
+        return None
         
-        prev_peak_q = peak_info.get("peak_q")
-        prev_peak_intensity = peak_info.get("peak_intensity")
-        
-        if prev_peak_q is not None and abs(peak_q - prev_peak_q) > q_threshold:
-            print("Peak q difference exceeds threshold.")
-            return None
-            
-        if prev_peak_intensity is not None and abs(peak_intensity - prev_peak_intensity) > intensity_threshold * prev_peak_intensity:
-            print("Peak intensity difference exceeds threshold.")
-            return None
-            
-    return peak_q, peak_intensity, output_range
+    prev_q = prev_info.get('peak_q')
+    prev_intensity = prev_info.get('peak_intensity')
+    prev_fwhm = prev_info.get('fwhm')
+    
+    # Basic q threshold check
+    if threshold_config['use_q_threshold'] and prev_q is not None:
+        if abs(peak_q - prev_q) > threshold_config['q_threshold']:
+            return f"Peak position changed by {abs(peak_q - prev_q):.3f}, exceeding threshold {threshold_config['q_threshold']:.3f}"
+    
+    # Intensity threshold check
+    if threshold_config['use_intensity_threshold'] and prev_intensity is not None:
+        intensity_change = abs(peak_intensity - prev_intensity) / prev_intensity
+        if intensity_change > threshold_config['intensity_threshold']:
+            return f"Peak intensity changed by {intensity_change*100:.1f}%, exceeding threshold {threshold_config['intensity_threshold']*100:.1f}%"
+    
+    # FWHM-based q threshold check
+    if threshold_config['use_fwhm_q_threshold'] and prev_fwhm is not None:
+        fwhm_q_threshold = threshold_config['fwhm_q_factor'] * prev_fwhm
+        if abs(peak_q - prev_q) > fwhm_q_threshold:
+            return f"Peak position changed by {abs(peak_q - prev_q):.3f}, exceeding FWHM-based threshold {fwhm_q_threshold:.3f}"
+    
+    # FWHM comparison check
+    if threshold_config['use_fwhm_comparison'] and prev_fwhm is not None:
+        fwhm_change = abs(fwhm - prev_fwhm) / prev_fwhm
+        if fwhm_change > threshold_config['fwhm_change_threshold']:
+            return f"Peak FWHM changed by {fwhm_change*100:.1f}%, exceeding threshold {threshold_config['fwhm_change_threshold']*100:.1f}%"
+    
+    return None
