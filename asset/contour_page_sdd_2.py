@@ -1,7 +1,7 @@
 #asset.contour_page_sdd_2.py
 from PyQt5 import QtWidgets, QtCore
 import numpy as np
-from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS
+from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS, PATH_INFO
 from asset.contour_util_gui import IndexRangeSelectionHelper, PeakTempRangeHelper
 from asset.contour_util import (plot_contour, fit_peak_vs_temp, calculate_corrected_sdd)
 from asset.contour_util import theta_to_q, q_to_2theta
@@ -265,12 +265,21 @@ class SDDFittingPage(QtCore.QObject):
                     raise RuntimeError("No contour_data available for preview.")
                 contour_data = self.temp_data['contour_data']
 
+            preview_graph_option = PLOT_OPTIONS['graph_option'].copy()
+            preview_graph_option['figure_title_enable'] = False
+            preview_graph_option['contour_title_enable'] = False
+            preview_graph_option['temp_title_enable'] = False
+            preview_graph_option['legend'] = False
+            preview_graph_option['temp'] = False
+            preview_graph_option['contour_xlabel_enable'] = False
+            preview_graph_option['contour_ylabel_enable'] = False
+
             # 3) 실제 Matplotlib 플롯 생성
             layout = QtWidgets.QVBoxLayout()
             canvas = plot_contour(
                 contour_data,
-                temp=True,
-                legend=True,
+                temp=False,
+                legend=False,
                 graph_option=PLOT_OPTIONS['graph_option'],
                 GUI=True
             )
@@ -399,7 +408,7 @@ class SDDFittingPage(QtCore.QObject):
             DATA['contour_data'] = self.temp_data['contour_data']
             
             print("DEBUG: Global data updated with temporary data")
-            
+
             # Trigger contour plot update in the main window
             self.main.parent().contour_plot_page.create_contour_plot()
             
