@@ -1,9 +1,8 @@
 #asset.contour_page_2.py
-from PyQt5 import QtWidgets, QtCore, QtGui
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from asset.contour_storage import DATA, PATH_INFO, PARAMS, PLOT_OPTIONS, PROCESS_STATUS
+from PyQt5 import QtWidgets, QtCore
+from asset.contour_storage import DATA, PATH_INFO, PLOT_OPTIONS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog, DragDropLineEdit, normalize_path
-from asset.contour_util import extract_contour_data, plot_contour
+from asset.contour_util import plot_contour
 from asset.contour_settings_dialog import ContourSettingsDialog
 import os
 import datetime

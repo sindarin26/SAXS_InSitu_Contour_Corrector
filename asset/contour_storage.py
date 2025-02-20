@@ -24,7 +24,8 @@ PARAMS = {
     'converted_energy': 8.042,
     'image_size_x': 1920,
     'image_size_y': 1920,
-    'q_format': 'CuKalpha'
+    'q_format': 'CuKalpha',
+    'fitting_model': 'gaussian',
 }
 
 # Plot options

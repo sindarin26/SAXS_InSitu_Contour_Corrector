@@ -90,18 +90,26 @@ class SDDPeakTrackingPage(QtCore.QObject):
             )
 
     def apply_q_range(self):
-        """
-        1번 페이지에서 사용자가 q range를 선택하면 그 범위를 저장하고,
-        조정 모드 여부에 따라 단일 프레임(조정 모드) 또는 전체 프레임(자동 모드)에 대해 피크 검출을 진행합니다.
-        """
+        """Process selected q range"""
         q_range = self.q_correction_helper.get_q_range()
         if q_range is None:
             QtWidgets.QMessageBox.warning(self.main, "Warning", "Please select a q range first.")
             return
         self.global_q_range = q_range
+        
         if self.in_adjustment_mode:
-            # 조정 모드: 현재 프레임에 대해서만 피크 검출
-            result = find_peak(self.contour_data, Index_number=self.current_index, input_range=self.global_q_range)
+            # Get current fitting model from PARAMS
+            fitting_model = PARAMS.get('fitting_model', 'gaussian')
+            
+            # Pass fitting model to find_peak
+            result = find_peak(
+                self.contour_data, 
+                Index_number=self.current_index, 
+                input_range=self.global_q_range,
+                peak_info=None,
+                fitting_function=fitting_model
+            )
+            
             if result is None:
                 self.peak_found = False
                 self.ui.L_current_status_2.setText(
@@ -118,23 +126,29 @@ class SDDPeakTrackingPage(QtCore.QObject):
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity
                 }
-                # 단일 프레임 재검출 결과는 append하고, frame_index 순으로 정렬
                 self.tracked_peaks["Data"].append(new_result)
                 self.tracked_peaks["Data"].sort(key=lambda x: x["frame_index"])
-            # 조정 모드 종료
+            
             self.in_adjustment_mode = False
             self.show_contour_page()
         else:
             self.run_automatic_tracking()
 
+
     def run_automatic_tracking(self):
-        """
-        전역 q range를 사용하여 현재 프레임부터 최대 프레임까지 자동으로 피크 검출을 진행합니다.
-        검출 실패 시 해당 프레임에서 멈추고 2번 페이지로 전환하여 결과를 보여줍니다.
-        """
+        """Automatic peak tracking with selected fitting model"""
         try:
+            fitting_model = PARAMS.get('fitting_model', 'gaussian')
+            
             while self.current_index <= self.max_index:
-                result = find_peak(self.contour_data, Index_number=self.current_index, input_range=self.global_q_range)
+                result = find_peak(
+                    self.contour_data, 
+                    Index_number=self.current_index, 
+                    input_range=self.global_q_range,
+                    peak_info=None,
+                    fitting_function=fitting_model
+                )
+                
                 if result is None:
                     self.peak_found = False
                     self.ui.L_current_status_2.setText(
@@ -153,11 +167,18 @@ class SDDPeakTrackingPage(QtCore.QObject):
                         "peak_Intensity": peak_intensity
                     })
                     self.current_index += 1
+                    
             if self.current_index > self.max_index:
                 self.ui.L_current_status_2.setText("Peak find Completed")
             self.show_contour_page()
+            
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self.main, "Error", f"Error during automatic tracking:\n{str(e)}")
+            QtWidgets.QMessageBox.critical(
+                self.main,
+                "Error",
+                f"Error during automatic tracking:\n{str(e)}"
+            )
+
 
     def show_contour_page(self):
             """2번 페이지: 컨투어 플롯 및 현재까지의 피크 결과 표시"""
@@ -344,4 +365,4 @@ class SDDPeakTrackingPage(QtCore.QObject):
         DATA['tracked_peaks'] = self.tracked_peaks
 
         # 3) 디버그 출력
-        print(f"DATA, tracked_peaks: {DATA['tracked_peaks']}")
+        #print(f"DATA, tracked_peaks: {DATA['tracked_peaks']}")

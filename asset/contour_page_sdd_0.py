@@ -19,11 +19,17 @@ class SDDSettingsPage(QtCore.QObject):
         self.main = main_dialog
         self.ui = main_dialog.ui
 
+        # Add fitting model to PARAMS if not present
+        if 'fitting_model' not in PARAMS:
+            PARAMS['fitting_model'] = 'gaussian'  # Default model
+
+
         # 초기 UI 설정: PARAMS의 현재 값으로 채움
         self.setup_ui()
         self.connect_signals()
         self.update_labels()
         self.set_initial_q_format()
+        self.setup_initial_fitting_model()
 
     def setup_ui(self):
         """PARAMS의 현재 값으로 QLineEdit들을 초기화"""
@@ -56,6 +62,8 @@ class SDDSettingsPage(QtCore.QObject):
 
         # 콤보박스: q_format 변경 시 처리
         self.ui.CB_q_format.currentIndexChanged.connect(self.q_format_changed)
+
+        self.ui.CB_fitting_model_sdd.currentIndexChanged.connect(self.fitting_model_changed)
 
         
     def create_update_callback(self, line_edit, param_name, convert_type):
@@ -112,3 +120,18 @@ class SDDSettingsPage(QtCore.QObject):
             self.ui.CB_q_format.setCurrentIndex(1)
         else:
             self.ui.CB_q_format.setCurrentIndex(0)
+
+    def setup_initial_fitting_model(self):
+        """Set initial fitting model based on PARAMS"""
+        model_index = {
+            'gaussian': 0,
+            'lorentzian': 1,
+            'voigt': 2
+        }.get(PARAMS.get('fitting_model', 'gaussian'), 0)
+        self.ui.CB_fitting_model_sdd.setCurrentIndex(model_index)
+
+    def fitting_model_changed(self, index):
+        """Update fitting model in PARAMS when combobox selection changes"""
+        models = ['gaussian', 'lorentzian', 'voigt']
+        PARAMS['fitting_model'] = models[index]
+        print(f"[DEBUG] Fitting model changed to: {PARAMS['fitting_model']}")

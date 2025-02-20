@@ -4,8 +4,8 @@ import numpy as np
 from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS
 from asset.contour_util_gui import IndexRangeSelectionHelper, PeakTempRangeHelper
 from asset.contour_util import (plot_contour, fit_peak_vs_temp, calculate_corrected_sdd)
+from asset.contour_util import theta_to_q, q_to_2theta
 import pyqtgraph as pg
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import traceback
 import copy
 
@@ -61,7 +61,6 @@ class SDDFittingPage(QtCore.QObject):
             - converted_energy가 None이면: 보정 후 q 값 (Å⁻¹)
             - converted_energy가 주어지면: 보정 후 CuKα 기준의 2θ 값 (°)
         """
-        from asset.contour_util import theta_to_q, q_to_2theta
 
         # 만약 converted_energy가 주어졌다면, 입력 데이터는 2θ 값(°)이므로 q로 변환
         if converted_energy is None:
