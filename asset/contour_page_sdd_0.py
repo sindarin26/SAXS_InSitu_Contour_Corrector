@@ -5,14 +5,15 @@ class SDDSettingsPage(QtCore.QObject):
     # 라벨 업데이트 매핑: 항상 PARAMS 기준으로 업데이트됨
     LABEL_MAPPINGS = {
         'L_sdd': ('original_sdd', '.4f', 'mm'),
-        'L_pixel_size': ('pixel_size', '.4f'),
-        'L_image_size_x': ('image_size_x', '', ''),
-        'L_image_size_y': ('image_size_y', '', ''),
+        'L_pixel_size': ('pixel_size', '.4f', 'pixel/mm'),
+        'L_image_size_x': ('image_size_x', '', 'px'),
+        'L_image_size_y': ('image_size_y', '', 'px'),
         'L_experiment_energy': ('experiment_energy', '.2f', 'keV'),
         'L_converted_energy': ('converted_energy', '.3f', 'keV'),
-        'L_beam_center_x': ('beam_center_x', '.4f'),
-        'L_beam_center_y': ('beam_center_y', '.4f')
+        'L_beam_center_x': ('beam_center_x', '.4f', 'px'),
+        'L_beam_center_y': ('beam_center_y', '.4f', 'px')
     }
+
 
     def __init__(self, main_dialog):
         super().__init__()
