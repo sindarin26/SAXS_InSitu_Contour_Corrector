@@ -69,7 +69,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Contour_plot(object):
     def setupUi(self, Contour_plot):
         Contour_plot.setObjectName("Contour_plot")
-        Contour_plot.resize(1849, 959)
+        Contour_plot.resize(1533, 1051)
         self.centralwidget = QtWidgets.QWidget(Contour_plot)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(self.centralwidget)
