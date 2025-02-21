@@ -1,7 +1,7 @@
 #asset/contour_page_peak_0.py
 
 from PyQt5 import QtWidgets, QtCore
-from asset.contour_storage import PARAMS, FITTING_THRESHOLD
+from asset.contour_storage import PARAMS, FITTING_THRESHOLD, DATA
 
 class PeakSettingsPage(QtCore.QObject):
     """First page of peak export window for managing settings"""
@@ -100,7 +100,7 @@ class PeakSettingsPage(QtCore.QObject):
         self.ui.CB_fitting_model_sdd.currentIndexChanged.connect(self.fitting_model_changed)
 
         # Connect next button
-        self.ui.PB_next_1.clicked.connect(lambda: self.main.ui.stackedWidget.setCurrentIndex(1))
+        self.ui.PB_next_1.clicked.connect(self.on_next_clicked)
 
     def connect_threshold_signals(self):
         """Connect signals for threshold UI elements"""
@@ -162,3 +162,17 @@ class PeakSettingsPage(QtCore.QObject):
         """Update fitting model in PARAMS when combobox selection changes"""
         models = ['gaussian', 'lorentzian', 'voigt']
         PARAMS['fitting_model'] = models[index]
+
+    def on_next_clicked(self):
+        """Next 버튼 클릭 시 contour_data를 복사하고 peak tracking 페이지로 이동"""
+        if not DATA.get('contour_data'):
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Warning",
+                "No contour data available. Please process data first."
+            )
+            return
+            
+        # PeakTrackingPage 초기화
+        self.main.peak_tracking_page.initialize_peak_tracking(DATA['contour_data'])
+        self.main.ui.stackedWidget.setCurrentIndex(1)
