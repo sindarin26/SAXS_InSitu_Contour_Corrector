@@ -4,6 +4,7 @@ from asset.contour_storage import DATA, PATH_INFO, PLOT_OPTIONS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog, DragDropLineEdit, normalize_path
 from asset.contour_util import plot_contour
 from asset.contour_settings_dialog import ContourSettingsDialog
+from asset.contour_page_peak import PeakExportDialog
 import os
 import datetime
 import pandas as pd
@@ -24,6 +25,7 @@ class ContourPlotPage(QtCore.QObject):
         self.PB_export = self.main.ui.PB_export
         self.PB_contour_setting = self.main.ui.PB_contour_setting
         self.PB_SDD_correction = self.main.ui.PB_SDD_correction
+        self.PB_peak_export = self.main.ui.PB_peak_export
         
         # 추가: 온도, 데이터 내보내기 토글 버튼
         self.PB_export_temp_on = self.main.ui.PB_export_temp_on
@@ -81,6 +83,8 @@ class ContourPlotPage(QtCore.QObject):
         self.LE_output_dir_2.returnPressed.connect(self.apply_output_dir)
 
         self.PB_open_output_folder.clicked.connect(self.open_output_folder)
+
+        self.PB_peak_export.clicked.connect(self.start_peak_export)
 
     def on_page_entered(self):
         """Handle initial setup when page is displayed"""
@@ -379,3 +383,15 @@ class ContourPlotPage(QtCore.QObject):
                     "Error",
                     f"Failed to open output folder:\n{str(e)}"
                 )
+
+    def start_peak_export(self):
+        """Start peak export process"""
+        if not DATA.get('contour_data'):
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Warning",
+                "No contour data available. Please process data first."
+            )
+            return
+        
+        PeakExportDialog(self.main).exec_()
