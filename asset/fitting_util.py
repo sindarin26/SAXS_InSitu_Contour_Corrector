@@ -353,6 +353,7 @@ def find_peak_extraction(contour_data, Index_number=0, input_range=None,
 def plot_contour_extraction(contour_data, current_peaks=None, graph_option=None, GUI=False):
     """
     컨투어 플롯과 여러 피크를 표시하는 함수.
+    피크들은 start_flag로 구분되며, 각 그룹은 다른 색상으로 표시됩니다.
     
     Parameters
     ----------
@@ -364,11 +365,6 @@ def plot_contour_extraction(contour_data, current_peaks=None, graph_option=None,
         그래프 옵션
     GUI : bool, optional
         GUI 모드 여부
-        
-    Returns
-    -------
-    matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg or None
-        GUI 모드일 때는 캔버스 반환, 아니면 None
     """
     # 기본 컨투어 플롯 설정
     default_graph_option = {
@@ -432,12 +428,91 @@ def plot_contour_extraction(contour_data, current_peaks=None, graph_option=None,
     ax.set_ylabel(final_opt["contour_ylabel_text"], fontsize=14, fontweight='bold')
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
 
-    # 피크 플롯
+    # 피크 그룹별 색상 설정
+    colors = ['red', 'blue', 'green', 'purple', 'orange']
+    scatter_points_by_group = {}
+    peak_lines_by_group = {}
+    selected_peak = [None, None]  # [group_id, index]
+    highlight_lines = [None, None]  # 수직/수평 하이라이트 라인
+
     if current_peaks is not None and current_peaks.get("Data"):
-        # 단순히 피크들을 선으로 연결
-        peak_q_vals = [entry["peak_q"] for entry in current_peaks["Data"]]
-        peak_times = [entry["Time"] for entry in current_peaks["Data"]]
-        ax.plot(peak_q_vals, peak_times, 'r-', linewidth=1.5, zorder=10)
+        # 피크들을 그룹별로 분류
+        peaks_by_group = {}
+        for i, entry in enumerate(current_peaks["Data"]):
+            peak_name = entry.get("peak_name", "")
+            # peak_{start_flag}_{q_value} 형식에서 start_flag 추출
+            if peak_name.startswith("peak_"):
+                parts = peak_name.split("_")
+                if len(parts) >= 3:
+                    group_id = int(parts[1])
+                    if group_id not in peaks_by_group:
+                        peaks_by_group[group_id] = {"indices": [], "q": [], "times": []}
+                    peaks_by_group[group_id]["indices"].append(i)
+                    peaks_by_group[group_id]["q"].append(entry["peak_q"])
+                    peaks_by_group[group_id]["times"].append(entry["Time"])
+
+        # 각 그룹별로 scatter points와 lines 생성
+        for j, (group_id, group_data) in enumerate(peaks_by_group.items()):
+            color = colors[j % len(colors)]
+            # 작은 동그라미로 표시 (markersize 감소)
+            scatter = ax.scatter(group_data["q"], group_data["times"], 
+                               color=color, edgecolor='black', 
+                               s=50, zorder=11, picker=5, 
+                               label=f'Peak group {group_id}')
+            line = ax.plot(group_data["q"], group_data["times"], 
+                         color=color, linestyle='-', 
+                         linewidth=1, zorder=10, alpha=0.5)[0]
+            
+            scatter_points_by_group[group_id] = {
+                'scatter': scatter,
+                'indices': group_data["indices"]
+            }
+            peak_lines_by_group[group_id] = line
+
+    def on_pick(event):
+        """Scatter point가 클릭되었을 때의 핸들러"""
+        # 이전 하이라이트 제거
+        for line in highlight_lines:
+            if line:
+                line.remove()
+                line = None
+        
+        # 클릭된 포인트가 어느 그룹에 속하는지 확인
+        for group_id, group_info in scatter_points_by_group.items():
+            if event.artist == group_info['scatter']:
+                ind = event.ind[0]  # 클릭된 포인트의 인덱스
+                real_index = group_info['indices'][ind]  # 실제 tracked_peaks에서의 인덱스
+                
+                # 해당 포인트의 q와 time 값
+                peak_entry = current_peaks["Data"][real_index]
+                peak_q = peak_entry["peak_q"]
+                peak_time = peak_entry["Time"]
+                
+                # 하이라이트 라인 추가
+                highlight_lines[0] = ax.axvline(x=peak_q, color='g', 
+                                              linestyle='--', linewidth=2, zorder=12)
+                highlight_lines[1] = ax.axhline(y=peak_time, color='g', 
+                                              linestyle='--', linewidth=2, zorder=12)
+                
+                # 선택된 피크 정보 저장
+                selected_peak[0] = group_id
+                selected_peak[1] = real_index
+                
+                # 캔버스 업데이트
+                if GUI:
+                    fig.canvas.draw_idle()
+                break
+
+    if GUI and scatter_points_by_group:
+        # 피커 이벤트 연결
+        fig.canvas.mpl_connect('pick_event', on_pick)
+        
+        # 툴팁 추가
+        ax.set_title("Click on a peak point to select for adjustment", 
+                    fontsize=12, pad=10)
+        
+        # 범례 추가
+        ax.legend()
 
     # 컬러바 추가
     fig.colorbar(cp, ax=ax, label='log10(Intensity)')
@@ -445,6 +520,12 @@ def plot_contour_extraction(contour_data, current_peaks=None, graph_option=None,
     if GUI:
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
         canvas = FigureCanvasQTAgg(fig)
+        
+        # 선택된 피크 정보를 얻기 위한 메서드 추가
+        def get_selected_peak_info():
+            return selected_peak[0], selected_peak[1]  # group_id, index
+        canvas.get_selected_peak_info = get_selected_peak_info
+        
         canvas.draw()
         return canvas
     else:
