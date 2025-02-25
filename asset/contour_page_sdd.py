@@ -1,4 +1,4 @@
-#assst/contour_page_sdd.py
+#asset/contour_page_sdd.py
 
 from asset.contour_sdd_ui import Ui_SDD_correction
 from PyQt5 import QtWidgets
@@ -21,6 +21,7 @@ class SDDCorrectionDialog(QtWidgets.QDialog):
         # Connect signals
         self.ui.PB_next_1.clicked.connect(self.start_peak_tracking)
         self.ui.PB_sdd_correction_start.clicked.connect(self.start_sdd_fitting)
+        self.ui.PB_quit.clicked.connect(self.close)  # Connect PB_quit to close the dialog
         
         # Set initial states
         self.ui.stackedWidget.setCurrentIndex(0)

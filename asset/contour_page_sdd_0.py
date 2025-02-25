@@ -236,6 +236,7 @@ class SDDSettingsPage(QtCore.QObject):
         }.get(PARAMS.get('fitting_model', 'gaussian'), 0)
         self.ui.CB_fitting_model_sdd.setCurrentIndex(model_index)
 
+
     def fitting_model_changed(self, index):
         """Update fitting model in PARAMS when combobox selection changes"""
         models = ['gaussian', 'lorentzian', 'voigt']

@@ -57,7 +57,7 @@ class PeakExportDialog(QtWidgets.QDialog):
 
     def setup_connections(self):
         """Setup signal connections"""
-        # Connect quit button
+        # Connect quit button to close the dialog
         self.ui.PB_quit.clicked.connect(self.close)
 
     def closeEvent(self, event):

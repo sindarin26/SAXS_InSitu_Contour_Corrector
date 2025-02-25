@@ -872,12 +872,12 @@
              </font>
             </property>
             <property name="text">
-             <string>Current Status</string>
+             <string>Peak Extraction Result</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QGraphicsView" name="QGV_final"/>
+           <widget class="QTableView" name="TV_peak_list"/>
           </item>
          </layout>
         </widget>
@@ -919,9 +919,9 @@
               <number>12</number>
              </property>
              <item>
-              <widget class="QPushButton" name="PB_export_peak">
+              <widget class="QPushButton" name="PB_export">
                <property name="text">
-                <string>Export All</string>
+                <string>Export</string>
                </property>
               </widget>
              </item>
@@ -944,16 +944,118 @@
               <number>12</number>
              </property>
              <item>
-              <widget class="QPushButton" name="PB_back_3">
+              <widget class="QPushButton" name="PB_back_to_contourpage_1">
                <property name="text">
-                <string>Adjust Peak</string>
+                <string>Back</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="PB_extract_another_peak">
+              <widget class="QPushButton" name="PB_open_output_folder">
                <property name="text">
-                <string>Extract Another Peak</string>
+                <string>Open Output Folder</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_5">
+      <layout class="QVBoxLayout" name="verticalLayout_10">
+       <item>
+        <widget class="QFrame" name="frame_40">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <item>
+           <widget class="QComboBox" name="CB_index">
+            <property name="font">
+             <font>
+              <pointsize>20</pointsize>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGraphicsView" name="QGV_qrange_index"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_37">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_24">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_38">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_35">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_39">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_36">
+             <property name="leftMargin">
+              <number>12</number>
+             </property>
+             <property name="topMargin">
+              <number>12</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="PB_back_to_contourpage_2">
+               <property name="text">
+                <string>Back</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_apply_qrange_index">
+               <property name="text">
+                <string>Apply</string>
                </property>
               </widget>
              </item>
