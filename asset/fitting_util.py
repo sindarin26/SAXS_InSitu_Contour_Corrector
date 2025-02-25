@@ -699,8 +699,8 @@ def plot_contour_extraction(
         
         sc = ax.scatter(
             q_vals, t_vals,
-            color=color,
-            edgecolor='black',
+            facecolor='none',  # 내부 채움 투명
+            edgecolor='none',  # 외곽선 투명
             s=40,
             picker=5 if flag_adjust_mode else False
         )
@@ -729,10 +729,7 @@ def plot_contour_extraction(
     if flag_adjust_mode:
         fig.canvas.mpl_connect('pick_event', on_pick)
 
-    # 8) 컬러바 추가
-    fig.colorbar(cp, ax=ax)
-
-    # 9) FigureCanvas 생성 & 반환
+    # 8) FigureCanvas 생성 & 반환
     canvas = FigureCanvas(fig)
 
     # 선택된 피크 이름을 반환하는 메서드 추가
