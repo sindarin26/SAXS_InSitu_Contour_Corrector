@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets
 from asset.contour_peak_ui import Ui_Peak_export_manager
 from asset.contour_page_peak_0 import PeakSettingsPage
 from asset.contour_page_peak_1 import PeakTrackingPage
+from asset.contour_page_peak_4 import QRangeIndexPage
 from asset.contour_storage import DATA
 import copy
 
@@ -18,6 +19,8 @@ class PeakExportDialog(QtWidgets.QDialog):
         # Initialize pages
         self.settings_page = PeakSettingsPage(self)
         self.peak_tracking_page = PeakTrackingPage(self)
+        self.qrange_index_page = QRangeIndexPage(self)
+
         
         # Set initial state
         self.ui.stackedWidget.setCurrentIndex(0)

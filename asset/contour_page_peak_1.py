@@ -24,6 +24,7 @@ class PeakTrackingPage(QtCore.QObject):
         self.max_index = 0
         self.auto_tracking = False
         self.manual_adjust = False
+        self.check_peak_range_mode = False  # 피크 범위 체크 모드 플래그 추가
         self.current_peak_name = None
         
         # UI elements from page 1 (index 1)
@@ -39,9 +40,11 @@ class PeakTrackingPage(QtCore.QObject):
         self.PB_stop_auto_tracking = self.ui.PB_stop_auto_tracking
         self.PB_adjust_mode = self.ui.PB_adjust_mode
         self.PB_find_another_peak = self.ui.PB_find_another_peak
+        self.PB_check_peak_range = self.ui.PB_check_peak_range  # 피크 범위 확인 버튼 추가
         
         # Set initial button text
         self.PB_adjust_mode.setText("Adjust Mode")
+        self.PB_check_peak_range.setText("Check Peak Range")
         
         # Helper for q-range selection
         self.q_correction_helper = None
@@ -66,6 +69,9 @@ class PeakTrackingPage(QtCore.QObject):
         self.PB_stop_auto_tracking.clicked.connect(self.on_stop_tracking)
         self.PB_adjust_mode.clicked.connect(self.on_enter_adjust_mode)
         self.PB_find_another_peak.clicked.connect(self.on_find_another_peak)
+        self.PB_check_peak_range.clicked.connect(self.on_check_peak_range)  # 피크 범위 확인 버튼 핸들러 연결
+
+
     
     def initialize_peak_tracking(self, contour_data):
         """
@@ -173,13 +179,14 @@ class PeakTrackingPage(QtCore.QObject):
         3. Tracking failed (Page 2)
         4. Waiting state after tracking completes/stops (Page 2)
         5. Adjustment mode (Page 2)
+        6. Check peak range mode (Page 2)
         """
         # Page 1 state
         self.PB_back_0.setEnabled(True)
         self.PB_apply_qrange.setEnabled(True)
         
         # Page 2 states depend on current tracking state
-        waiting_state = not self.auto_tracking and not self.manual_adjust
+        waiting_state = not self.auto_tracking and not self.manual_adjust and not self.check_peak_range_mode
         
         # During auto tracking, only Next and Stop buttons are enabled
         if self.auto_tracking and not self.manual_adjust:
@@ -187,33 +194,58 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_stop_auto_tracking.setEnabled(True)
             self.PB_adjust_mode.setEnabled(False)
             self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(False)
+        # In check peak range mode with peak selected, enable Next
+        elif self.check_peak_range_mode and self.current_peak_name is not None:
+            self.PB_next.setEnabled(True)
+            self.PB_stop_auto_tracking.setEnabled(False)
+            self.PB_adjust_mode.setEnabled(False)
+            self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(True)  # Cancel 버튼으로 사용
+            self.PB_check_peak_range.setText("Cancel")
+        # In check peak range mode without peak selected
+        elif self.check_peak_range_mode and self.current_peak_name is None:
+            self.PB_next.setEnabled(False)
+            self.PB_stop_auto_tracking.setEnabled(False)
+            self.PB_adjust_mode.setEnabled(False)
+            self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(True)  # Cancel 버튼으로 사용
+            self.PB_check_peak_range.setText("Cancel")
         # In adjustment mode with peak selected, enable Next
         elif self.manual_adjust and self.current_peak_name is not None:
             self.PB_next.setEnabled(True)
             self.PB_stop_auto_tracking.setEnabled(False)
             self.PB_adjust_mode.setEnabled(True)  # Always enabled to toggle mode
             self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(False)
         # In adjustment mode without peak selected
         elif self.manual_adjust and self.current_peak_name is None:
             self.PB_next.setEnabled(False)
             self.PB_stop_auto_tracking.setEnabled(False)
             self.PB_adjust_mode.setEnabled(True)  # Always enabled to toggle mode
             self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(False)
         # In waiting state (tracking complete or stopped)
         elif waiting_state:
             self.PB_next.setEnabled(False)
             self.PB_stop_auto_tracking.setEnabled(False)
             self.PB_adjust_mode.setEnabled(True)
             self.PB_find_another_peak.setEnabled(True)
+            self.PB_check_peak_range.setEnabled(
+                len(self.main.PEAK_EXTRACT_DATA['found_peak_list']) > 0
+            )
+            self.PB_check_peak_range.setText("Check Peak Range")
         # Default state
         else:
             self.PB_next.setEnabled(False)
             self.PB_stop_auto_tracking.setEnabled(False)
             self.PB_adjust_mode.setEnabled(False)
             self.PB_find_another_peak.setEnabled(False)
+            self.PB_check_peak_range.setEnabled(False)
             
         # Print current state for debugging
-        print(f"UI State - auto_tracking: {self.auto_tracking}, manual_adjust: {self.manual_adjust}, current_peak: {self.current_peak_name}")
+        print(f"UI State - auto_tracking: {self.auto_tracking}, manual_adjust: {self.manual_adjust}, check_peak_range: {self.check_peak_range_mode}, current_peak: {self.current_peak_name}")
+
     
     def on_back_to_settings(self):
         """Handle back button to settings page"""
@@ -553,13 +585,20 @@ class PeakTrackingPage(QtCore.QObject):
                         f"Selected peak {peak_name} at frame {frame_index}. Click Next to adjust it."
                     )
                     self.update_ui_state()
+                elif self.check_peak_range_mode:
+                    self.current_peak_name = peak_name
+                    self.current_index = frame_index
+                    self.L_current_status_2.setText(
+                        f"Selected peak {peak_name} at frame {frame_index}. Click Next to check q-ranges."
+                    )
+                    self.update_ui_state()
         
             # Create contour plot with callback
             self.contour_canvas = plot_contour_extraction(
                 contour_data=self.contour_data,
                 tracked_peaks=self.main.PEAK_EXTRACT_DATA['tracked_peaks'],
                 found_peak_list=peaks_to_show,
-                flag_adjust_mode=self.manual_adjust,
+                flag_adjust_mode=self.manual_adjust or self.check_peak_range_mode,  # 수정: 체크 모드에서도 피크 선택 가능
                 on_peak_selected_callback=on_peak_selected  # 콜백 전달
             )
             
@@ -587,10 +626,33 @@ class PeakTrackingPage(QtCore.QObject):
         Different behaviors depending on state:
         - If auto tracking failed: retry at current point with manual adjustment
         - If in adjustment mode: edit selected peak
+        - If in check peak range mode: move to page 4 for peak range inspection
         """
-        print(f"Next button clicked - current state: auto_tracking={self.auto_tracking}, manual_adjust={self.manual_adjust}")
+        print(f"Next button clicked - current state: auto_tracking={self.auto_tracking}, manual_adjust={self.manual_adjust}, check_peak_range={self.check_peak_range_mode}")
         
-        if self.manual_adjust:
+        if self.check_peak_range_mode:
+            if self.current_peak_name is None:
+                # 피크가 선택되지 않은 경우 경고 메시지 표시
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "No Peak Selected",
+                    "Please select a peak from the contour plot first.",
+                    QtWidgets.QMessageBox.Ok
+                )
+                return
+                
+            # Check peak range mode - go to page 5 (index range page) - UI 인덱스는 4
+            self.ui.stackedWidget.setCurrentIndex(4)  # 인덱스 4는 stackedWidget에서는 5번째 페이지
+            
+            # Initialize QRangeIndexPage with selected peak data
+            if hasattr(self.main, 'qrange_index_page'):
+                self.main.qrange_index_page.initialize_page(
+                    self.contour_data,
+                    self.current_peak_name,
+                    self.current_index
+                )
+            
+        elif self.manual_adjust:
             if self.current_peak_name is None:
                 # 피크가 선택되지 않은 경우 경고 메시지 표시
                 QtWidgets.QMessageBox.warning(
@@ -655,7 +717,38 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_apply_qrange.clicked.connect(self.on_apply_qrange)
         
         self.update_ui_state()
-    
+
+
+    def on_check_peak_range(self):
+        """
+        피크 범위 체크 모드 진입/취소
+        """
+        if self.check_peak_range_mode:
+            # 이미 체크 모드인 경우, 취소 기능 수행
+            self.check_peak_range_mode = False
+            self.current_peak_name = None
+            self.L_current_status_2.setText("Peak range check mode cancelled")
+            self.PB_check_peak_range.setText("Check Peak Range")
+            self.update_contour_plot()
+        else:
+            # 체크 모드 진입
+            if not self.main.PEAK_EXTRACT_DATA['found_peak_list']:
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "No Peaks Available",
+                    "Please track at least one peak first."
+                )
+                return
+                
+            self.check_peak_range_mode = True
+            self.current_peak_name = None
+            self.L_current_status_2.setText("Click on a peak to check/modify its q-range at each frame")
+            self.PB_check_peak_range.setText("Cancel")
+            self.update_contour_plot()
+            
+        self.update_ui_state()
+
+
     def on_stop_tracking(self):
         """Stop current tracking and add to found_peak_list"""
         if not self.current_peak_name:
@@ -711,6 +804,7 @@ class PeakTrackingPage(QtCore.QObject):
         self.current_index = 0
         self.auto_tracking = True
         self.manual_adjust = False
+        self.check_peak_range_mode = False  # 체크 모드도 해제
         self.current_peak_name = None
         
         # Go to q-range selection page
