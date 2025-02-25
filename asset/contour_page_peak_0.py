@@ -1,7 +1,8 @@
 #asset/contour_page_peak_0.py
 
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from asset.contour_storage import PARAMS, FITTING_THRESHOLD, DATA
+import copy
 
 class PeakSettingsPage(QtCore.QObject):
     """First page of peak export window for managing settings"""
@@ -99,8 +100,14 @@ class PeakSettingsPage(QtCore.QObject):
         # Connect fitting model changes
         self.ui.CB_fitting_model_sdd.currentIndexChanged.connect(self.fitting_model_changed)
 
-        # Connect next button
-        self.ui.PB_next_1.clicked.connect(self.on_next_clicked)
+        # Connect next button - disconnect from old behavior and connect to our new function
+        try:
+            self.ui.PB_next_1.clicked.disconnect()
+        except TypeError:
+            # No connections yet
+            pass
+            
+        self.ui.PB_next_1.clicked.connect(self.on_start_tracking)
 
     def connect_threshold_signals(self):
         """Connect signals for threshold UI elements"""
@@ -163,8 +170,12 @@ class PeakSettingsPage(QtCore.QObject):
         models = ['gaussian', 'lorentzian', 'voigt']
         PARAMS['fitting_model'] = models[index]
 
-    def on_next_clicked(self):
-        """Next 버튼 클릭 시 contour_data를 복사하고 peak tracking 페이지로 이동"""
+    def on_start_tracking(self):
+        """
+        Start tracking button click handler
+        Initializes peak data structure and moves to peak tracking page
+        """
+        # Check if contour data exists
         if not DATA.get('contour_data'):
             QtWidgets.QMessageBox.warning(
                 self.main,
@@ -173,6 +184,16 @@ class PeakSettingsPage(QtCore.QObject):
             )
             return
             
-        # PeakTrackingPage 초기화
-        self.main.peak_tracking_page.initialize_peak_tracking(DATA['contour_data'])
-        self.main.ui.stackedWidget.setCurrentIndex(1)
+        # Initialize peak data with contour data
+        self.main.init_peak_data(DATA['contour_data'])
+        
+        # Apply current note if any
+        note_text = self.ui.LE_note.text().strip()
+        self.main.PEAK_EXTRACT_DATA['NOTE'] = note_text
+        
+        # Move to peak tracking page
+        self.ui.stackedWidget.setCurrentIndex(1)
+        
+        # Initialize peak tracking page with our contour data
+        if hasattr(self.main, 'peak_tracking_page'):
+            self.main.peak_tracking_page.initialize_peak_tracking(self.main.PEAK_EXTRACT_DATA['PEAK'])
