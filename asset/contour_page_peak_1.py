@@ -380,11 +380,16 @@ class PeakTrackingPage(QtCore.QObject):
             }
             self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)
         
-        # 이 부분 삭제: self.auto_tracking = False
-        # auto_tracking 플래그를 건드리지 않고 기존 상태 유지
+        # 수정 성공 메시지 표시
+        success_msg = f"Peak {peak_name} at frame {self.current_index} successfully adjusted"
+        print(success_msg)
         
-        # 컨투어 페이지로 돌아갑니다
-        self.L_current_status_2.setText(f"Peak {peak_name} at frame {self.current_index} successfully adjusted")
+        # 중요: 피크 선택 상태 초기화
+        modified_peak_name = peak_name  # 메시지용으로 임시 저장
+        self.current_peak_name = None  # 선택된 피크 초기화
+        
+        # 컨투어 페이지로 돌아감
+        self.L_current_status_2.setText(f"{success_msg}. Click on another peak to continue.")
         self.ui.stackedWidget.setCurrentIndex(2)  # 컨투어 페이지로 이동
         self.update_contour_plot()
         self.update_ui_state()
@@ -517,7 +522,17 @@ class PeakTrackingPage(QtCore.QObject):
         """
         print(f"Next button clicked - current state: auto_tracking={self.auto_tracking}, manual_adjust={self.manual_adjust}")
         
-        if self.manual_adjust and self.current_peak_name:
+        if self.manual_adjust:
+            if self.current_peak_name is None:
+                # 피크가 선택되지 않은 경우 경고 메시지 표시
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "No Peak Selected",
+                    "Please select a peak from the contour plot first.",
+                    QtWidgets.QMessageBox.Ok
+                )
+                return
+            
             # In adjustment mode, edit selected peak at the current_index (which was set from the selection)
             self.ui.stackedWidget.setCurrentIndex(1)  # Go to q-range page
             self.setup_q_range_graph()  # Setup graph for current frame
