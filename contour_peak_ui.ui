@@ -824,7 +824,21 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="PB_sdd_correction_start">
+              <widget class="QPushButton" name="PB_stop_auto_tracking">
+               <property name="text">
+                <string>Done for this Peak</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_adjust_mode">
+               <property name="text">
+                <string>Adjust_mode</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="PB_find_another_peak">
                <property name="text">
                 <string>Find  another Peak</string>
                </property>
