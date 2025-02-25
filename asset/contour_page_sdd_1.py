@@ -69,8 +69,13 @@ class SDDPeakTrackingPage(QtCore.QObject):
         self.main.ui.stackedWidget.setCurrentIndex(1)
         self.setup_q_range_selection()
 
-    def setup_q_range_selection(self):
-        """1번 페이지: QGV에 현재 프레임의 데이터를 띄우고 q range 선택"""
+    def setup_q_range_selection(self, mode=None):
+        """
+        1번 페이지: QGV에 현재 프레임의 데이터를 띄우고 q range 선택
+        
+        Parameters:
+            mode (str): 'auto_tracking_error' 또는 'manual_adjust' - 어떤 모드에서 호출되었는지 표시
+        """
         if not self.contour_data or self.current_index >= len(self.contour_data['Data']):
             QtWidgets.QMessageBox.warning(self.main, "Error", "Current frame index is out of range.")
             return
@@ -81,14 +86,69 @@ class SDDPeakTrackingPage(QtCore.QObject):
             layout = QtWidgets.QVBoxLayout()
             layout.addWidget(plot_widget)
             self.ui.QGV_qrange.setLayout(layout)
-            self.q_correction_helper = QRangeCorrectionHelper(plot_widget)
+            
+            # 피크 정보와 범위 정보 가져오기
+            peak_q = None
+            peak_index = None
+            custom_q_range = None
+            
+            if mode == "auto_tracking_error":
+                # 오토트래킹 에러 케이스 - 직전 프레임 피크 참조
+                for entry in reversed(self.tracked_peaks["Data"]):
+                    if entry.get("frame_index") < self.current_index:
+                        peak_q = entry.get("peak_q")
+                        peak_index = entry.get("frame_index")
+                        break
+            elif mode == "manual_adjust":
+                # manual adjust 케이스 - 현재 선택된 피크 사용
+                for entry in self.tracked_peaks["Data"]:
+                    if entry.get("frame_index") == self.current_index:
+                        peak_q = entry.get("peak_q")
+                        peak_index = entry.get("frame_index")
+                        
+                        # 피크 위치 주변으로 좁은 범위 설정 (피크 위치에 집중)
+                        if peak_q is not None:
+                            q_width = 0.1  # 적절한 범위 조정
+                            custom_q_range = (peak_q - q_width, peak_q + q_width)
+                        break
+            else:
+                # 기본 케이스 - 이전 로직 유지
+                # 현재 인덱스의 피크 정보 찾기
+                if len(self.tracked_peaks["Data"]) > 0:
+                    for entry in self.tracked_peaks["Data"]:
+                        if entry.get("frame_index") == self.current_index:
+                            peak_q = entry.get("peak_q")
+                            peak_index = entry.get("frame_index")
+                            break
+            
+            # Initialize helper with peak and range information
             current_entry = self.contour_data['Data'][self.current_index]
-            self.q_correction_helper.set_data(current_entry['q'], current_entry['Intensity'])
-            self.q_correction_helper.add_selection_lines()
-            self.ui.L_current_status_1.setText(
-                f"Select q range for frame {self.current_index} / {self.max_index}"
+            self.q_correction_helper = QRangeCorrectionHelper(plot_widget)
+            self.q_correction_helper.set_data(
+                current_entry['q'], 
+                current_entry['Intensity'],
+                peak=peak_q,
+                index=peak_index,
+                current_index=self.current_index,
+                q_range=custom_q_range if custom_q_range else self.global_q_range
             )
-
+            
+            self.q_correction_helper.add_selection_lines()
+            
+            # 상태 메시지 업데이트
+            if mode == "auto_tracking_error" and peak_index is not None:
+                self.ui.L_current_status_1.setText(
+                    f"Manual adjustment for frame {self.current_index} using reference from frame {peak_index}"
+                )
+            elif mode == "manual_adjust":
+                self.ui.L_current_status_1.setText(
+                    f"Adjusting peak at frame {self.current_index}"
+                )
+            else:
+                self.ui.L_current_status_1.setText(
+                    f"Select q range for frame {self.current_index} / {self.max_index}"
+                )
+            
     def apply_q_range(self):
         """Process selected q range"""
         q_range = self.q_correction_helper.get_q_range()
@@ -97,44 +157,75 @@ class SDDPeakTrackingPage(QtCore.QObject):
             return
         self.global_q_range = q_range
         
-        if self.in_adjustment_mode:
-            # Get current fitting model from PARAMS
-            fitting_model = PARAMS.get('fitting_model', 'gaussian')
-            
-            # Pass fitting model to find_peak
-            result = find_peak(
-                self.contour_data, 
-                Index_number=self.current_index, 
-                input_range=self.global_q_range,
-                peak_info=None,
-                fitting_function=fitting_model,
-                threshold_config=FITTING_THRESHOLD
+        # Get current fitting model from PARAMS
+        fitting_model = PARAMS.get('fitting_model', 'gaussian')
+        
+        # Find the peak with the selected q range
+        result = find_peak(
+            self.contour_data, 
+            Index_number=self.current_index, 
+            input_range=self.global_q_range,
+            peak_info=None,
+            fitting_function=fitting_model,
+            threshold_config=FITTING_THRESHOLD
+        )
+        
+        if isinstance(result, str):
+            self.peak_found = False
+            self.ui.L_current_status_2.setText(
+                f"Peak not found for frame {self.current_index}: {result}. Please adjust q range."
             )
+            return
+        else:
+            self.peak_found = True
+            peak_q, peak_intensity, _, fwhm = result  # Now unpacking 4 values
+            current_entry = self.contour_data['Data'][self.current_index]
             
-            if isinstance(result, str):
-                self.peak_found = False
-                self.ui.L_current_status_2.setText(
-                    f"Peak not found for frame {self.current_index}: {result}. Please adjust q range."
-                )
+            if self.in_adjustment_mode:
+                # 기존 데이터 수정 모드 - 같은 프레임 인덱스의 항목 찾아서 업데이트
+                found_existing = False
+                for i, entry in enumerate(self.tracked_peaks["Data"]):
+                    if entry.get("frame_index") == self.current_index:
+                        # 기존 항목 업데이트
+                        self.tracked_peaks["Data"][i] = {
+                            "frame_index": self.current_index,
+                            "Time": current_entry["Time"],
+                            "Temperature": current_entry.get("Temperature", 0),
+                            "peak_q": peak_q,
+                            "peak_Intensity": peak_intensity,
+                            "fwhm": fwhm
+                        }
+                        found_existing = True
+                        break
+                
+                if not found_existing:
+                    # 기존 항목이 없으면 새로 추가
+                    self.tracked_peaks["Data"].append({
+                        "frame_index": self.current_index,
+                        "Time": current_entry["Time"],
+                        "Temperature": current_entry.get("Temperature", 0),
+                        "peak_q": peak_q,
+                        "peak_Intensity": peak_intensity,
+                        "fwhm": fwhm
+                    })
+                    # 프레임 인덱스 기준으로 정렬
+                    self.tracked_peaks["Data"].sort(key=lambda x: x["frame_index"])
+                
+                self.in_adjustment_mode = False
+                self.ui.L_current_status_2.setText(f"Peak at frame {self.current_index} successfully adjusted.")
+                self.show_contour_page()
             else:
-                self.peak_found = True
-                peak_q, peak_intensity, _, fwhm = result  # Now unpacking 4 values
-                current_entry = self.contour_data['Data'][self.current_index]
-                new_result = {
+                # 자동 트래킹 모드
+                self.tracked_peaks["Data"].append({
                     "frame_index": self.current_index,
                     "Time": current_entry["Time"],
                     "Temperature": current_entry.get("Temperature", 0),
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
-                    "fwhm": fwhm  # Adding FWHM to the tracked data
-                }
-                self.tracked_peaks["Data"].append(new_result)
-                self.tracked_peaks["Data"].sort(key=lambda x: x["frame_index"])
-            
-            self.in_adjustment_mode = False
-            self.show_contour_page()
-        else:
-            self.run_automatic_tracking()
+                    "fwhm": fwhm
+                })
+                self.current_index += 1
+                self.run_automatic_tracking()
 
     def run_automatic_tracking(self):
         """Automatic peak tracking with selected fitting model"""
@@ -303,51 +394,56 @@ class SDDPeakTrackingPage(QtCore.QObject):
         self.adjust_cid = self.adjust_canvas.mpl_connect("button_press_event", on_click)
 
     def retry_current_frame(self):
-        """
-        2번 페이지의 Next 버튼 동작:
-        자동 검출 실패 시, 현재 프레임에 대해 1번 페이지로 돌아가 q range를 재조정합니다.
-        """
-        if self.current_index > self.max_index:
-            QtWidgets.QMessageBox.information(self.main, "Info", "All frames processed.")
-            return
-        self.main.ui.stackedWidget.setCurrentIndex(1)
-        self.setup_q_range_selection()
+        """현재 프레임을 수동으로 재처리"""
+        self.main.ui.stackedWidget.setCurrentIndex(1)  # q-range 페이지로 이동
+        
+        # 이전에 이 프레임의 피크가 이미 있는지 체크
+        existing_peak = False
+        for entry in self.tracked_peaks["Data"]:
+            if entry.get("frame_index") == self.current_index:
+                existing_peak = True
+                break
+        
+        # 모드 설정: 기존에 피크가 있으면 수동 조정 모드, 없으면 자동 트래킹 에러 모드
+        mode = "manual_adjust" if existing_peak else "auto_tracking_error"
+        
+        # q-range 선택 화면 설정
+        self.setup_q_range_selection(mode=mode)
 
     def adjust_specific_peak(self):
-        """
-        2번 페이지에서 "Adjust specific Peak" 버튼을 누르면,
-        만약 사용자가 캔버스에서 피크를 선택했다면, 해당 피크의 저장된 frame_index를 가져와 current_index로 설정하고,
-        해당 프레임의 기존 피크 결과를 삭제한 후, 조정 모드로 전환하여 1번 페이지에서 단일 프레임에 대해 q range 재조정합니다.
-        """
+        """컨투어 플롯에서 선택한 피크를 수정"""
+        # 선택된 피크가 있는지 확인
         if self.selected_peak_index is None:
-            QtWidgets.QMessageBox.information(self.main, "Info", "Please click on a peak to select it first.")
+            QtWidgets.QMessageBox.warning(
+                self.main, 
+                "No Peak Selected", 
+                "Please click on a peak in the contour plot to select it first."
+            )
             return
-        selected_data = self.tracked_peaks["Data"][self.selected_peak_index]
-        frame_to_adjust = selected_data.get("frame_index", None)
-        # 만약 frame_to_adjust가 전체 범위와 같거나 초과하면 최대 인덱스로 보정
-        if frame_to_adjust is None or frame_to_adjust >= len(self.contour_data['Data']):
-            frame_to_adjust = len(self.contour_data['Data']) - 1
-        self.current_index = frame_to_adjust
-        print(f"Selected peak from frame {self.current_index} for adjustment.")
-        # 해당 프레임의 기존 결과 삭제
-        del self.tracked_peaks["Data"][self.selected_peak_index]
-        self.selected_peak_index = None
-        if self.highlight_marker_v is not None:
-            try:
-                self.highlight_marker_v.remove()
-            except Exception:
-                pass
-            self.highlight_marker_v = None
-        if self.highlight_marker_h is not None:
-            try:
-                self.highlight_marker_h.remove()
-            except Exception:
-                pass
-            self.highlight_marker_h = None
-        # 조정 모드 활성화: 단일 프레임에 대해서만 피크 검출 진행
-        self.in_adjustment_mode = True
-        self.main.ui.stackedWidget.setCurrentIndex(1)
-        self.setup_q_range_selection()
+            
+        # 선택된 피크의 프레임 인덱스를 가져옴
+        try:
+            selected_entry = self.tracked_peaks["Data"][self.selected_peak_index]
+            self.current_index = selected_entry["frame_index"]
+            
+            # 조정 모드 플래그 설정
+            self.in_adjustment_mode = True
+            
+            # q-range 선택 화면으로 이동
+            self.main.ui.stackedWidget.setCurrentIndex(1)
+            self.setup_q_range_selection(mode="manual_adjust")
+            
+            # 상태 메시지 업데이트
+            self.ui.L_current_status_1.setText(
+                f"Adjusting peak at frame {self.current_index} (selected from contour)"
+            )
+        except (IndexError, KeyError) as e:
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Selection Error",
+                f"Error selecting peak: {str(e)}"
+            )
+            self.selected_peak_index = None
 
     def finalize_peak_tracking(self):
         """최종 완료: 모든 프레임이 처리되었을 때 후속 처리/저장 진행"""

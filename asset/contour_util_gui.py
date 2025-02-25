@@ -343,14 +343,52 @@ class QRangeCorrectionHelper:
         self.q_data = None
         self.intensity_data = None
         self.selection_lines = []
+        self.peak_line = None
+        self.peak_label = None
+        self.peak_value = None
+        self.peak_index = None  # 피크의 원래 프레임 인덱스
+        self.current_index = None  # 현재 처리 중인 프레임 인덱스
+        self.initial_range = None
         
-    def set_data(self, q_data, intensity_data):
-        """데이터 설정"""
+    def set_data(self, q_data, intensity_data, peak=None, index=None, current_index=None, q_range=None):
+        """
+        데이터 설정 및 초기 뷰포트 설정
+        
+        Parameters:
+            q_data: q 값 데이터
+            intensity_data: 강도 데이터
+            peak: 표시할 피크의 q 값 (선택적)
+            index: 피크가 속한 프레임 인덱스 (선택적)
+            current_index: 현재 처리 중인 프레임 인덱스
+            q_range: (min, max) 형태의 q 범위 (선택적)
+        """
         # 입력 데이터를 NumPy 배열로 명시적 변환
         self.q_data = np.array(q_data)
         self.intensity_data = np.array(intensity_data)
+        self.peak_value = peak
+        self.peak_index = index
+        self.current_index = current_index if current_index is not None else index
+        self.initial_range = q_range
         self.plot_data()
         
+        # 뷰포트 설정
+        if q_range is not None:
+            range_min, range_max = q_range
+            range_width = range_max - range_min
+            center = (range_max + range_min) / 2
+            
+            # 범위의 2배로 확장
+            view_min = center - range_width
+            view_max = center + range_width
+            
+            # 데이터 범위를 벗어나지 않도록 조정
+            min_q, max_q = np.min(self.q_data), np.max(self.q_data)
+            view_min = max(min_q, view_min)
+            view_max = min(max_q, view_max)
+            
+            # 뷰포트 설정
+            self.plot_widget.setXRange(view_min, view_max, padding=0.05)
+            
     def plot_data(self):
         """데이터 플롯"""
         if self.q_data is None or self.intensity_data is None:
@@ -379,11 +417,18 @@ class QRangeCorrectionHelper:
         y_offset = (np.max(self.intensity_data) - np.min(self.intensity_data)) * 0.1
         label_ypos = np.max(self.intensity_data) + y_offset
         
-        # 두 개의 선택 라인 생성
-        pos1, pos2 = self.q_data[len(self.q_data)//4], self.q_data[len(self.q_data)*3//4]
+        # initial_range가 설정되어 있으면 해당 범위 기준으로, 아니면 기본값
+        min_q, max_q = np.min(self.q_data), np.max(self.q_data)
+        if self.initial_range:
+            range_min, range_max = self.initial_range
+            pos1, pos2 = range_min, range_max
+        else:
+            # 기본 위치는 데이터 범위의 1/4, 3/4 지점
+            pos1, pos2 = self.q_data[len(self.q_data)//4], self.q_data[len(self.q_data)*3//4]
         
-        line1 = DraggableLine(pos=pos1, bounds=(min(self.q_data), max(self.q_data)))
-        line2 = DraggableLine(pos=pos2, bounds=(min(self.q_data), max(self.q_data)))
+        # 두 개의 선택 라인 생성
+        line1 = DraggableLine(pos=pos1, bounds=(min_q, max_q))
+        line2 = DraggableLine(pos=pos2, bounds=(min_q, max_q))
         
         line1.setPen(pg.mkPen(color='b', width=1.5))
         line2.setPen(pg.mkPen(color='b', width=1.5))
@@ -400,9 +445,13 @@ class QRangeCorrectionHelper:
         line1.set_label(label1)
         line2.set_label(label2)
         
-        # 라인 이동 시 라벨 업데이트 시그널 연결
-        line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
-        line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+        # 라인들을 서로 연결하여 교차 못하게 함
+        line1.other_line = line2
+        line2.other_line = line1
+        
+        # 라인 이동 시 라벨 업데이트 및 다른 라인 제한 시그널 연결
+        line1.sigPositionChanged.connect(lambda: self.on_line_moved(line1, "Start", label_ypos, True))
+        line2.sigPositionChanged.connect(lambda: self.on_line_moved(line2, "End", label_ypos, False))
         
         # 초기 라벨 업데이트
         self.update_line_label(line1, "Start", label_ypos)
@@ -416,22 +465,104 @@ class QRangeCorrectionHelper:
         
         self.selection_lines = [line1, line2]
         
+        # 피크가 있다면 피크 위치 표시선 추가
+        if self.peak_value is not None:
+            # 피크 라인은 녹색 점선으로
+            peak_line = pg.InfiniteLine(
+                pos=self.peak_value, 
+                angle=90, 
+                movable=False, 
+                pen=pg.mkPen(color='g', width=2, style=pg.QtCore.Qt.DashLine)
+            )
+            
+            # 상황에 맞는 라벨 텍스트 생성
+            if self.peak_index == self.current_index:
+                # 현재 편집 중인 피크인 경우
+                peak_label_text = f"Current Peak\nq = {self.peak_value:.4f}\nFrame {self.peak_index}"
+            else:
+                # 직전 피크인 경우 (auto tracking 실패 시)
+                peak_label_text = f"Reference Peak\nq = {self.peak_value:.4f}\nFrom Frame {self.peak_index}"
+                
+            peak_label = pg.TextItem(text=peak_label_text, color=(0, 100, 0))
+            peak_label.setPos(self.peak_value, label_ypos * 0.9)  # 선택 라인 라벨보다 약간 아래에 배치
+            
+            self.plot_widget.addItem(peak_line)
+            self.plot_widget.addItem(peak_label)
+            
+            self.peak_line = peak_line
+            self.peak_label = peak_label
+        
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
     
+    def on_line_moved(self, line, prefix, fixed_y, is_start_line):
+        """
+        라인 이동 시 호출되는 이벤트 핸들러
+        라벨 업데이트 및 다른 라인과의 위치 제한 처리
+        """
+        # 라벨 업데이트
+        self.update_line_label(line, prefix, fixed_y)
+        
+        # start와 end 라인이 교차하지 않도록 처리
+        current_pos = line.value()
+        other_line = line.other_line
+        if other_line:
+            other_pos = other_line.value()
+            
+            if is_start_line:  # start 라인인 경우
+                if current_pos > other_pos:
+                    # start가 end를 넘어가면 end도 같이 이동
+                    other_line.setValue(current_pos)
+                    self.update_line_label(other_line, "End", fixed_y)
+            else:  # end 라인인 경우
+                if current_pos < other_pos:
+                    # end가 start보다 앞으로 가면 start도 같이 이동
+                    other_line.setValue(current_pos)
+                    self.update_line_label(other_line, "Start", fixed_y)
+    
     def update_line_label(self, line, prefix, fixed_y):
-        """라인 라벨 업데이트"""
+        """라인 라벨 업데이트 - 선형 보간 방식으로 정확한 값 계산"""
         if self.q_data is None:
             return
         
         # 현재 라인 x좌표(=q값) 가져오기
         x_pos = line.value()
         
-        # 가장 가까운 인덱스 찾기
-        idx = np.abs(self.q_data - x_pos).argmin()
+        # 정렬된 데이터인지 확인 (q_data가 오름차순으로 정렬되어 있어야 함)
+        if not np.all(np.diff(self.q_data) > 0):
+            # 데이터가 정렬되어 있지 않은 경우, 정렬
+            sorted_indices = np.argsort(self.q_data)
+            q_sorted = self.q_data[sorted_indices]
+            intensity_sorted = self.intensity_data[sorted_indices]
+        else:
+            # 이미 정렬되어 있는 경우
+            q_sorted = self.q_data
+            intensity_sorted = self.intensity_data
         
-        # 해당 인덱스의 q값과 intensity 찾기
-        q_val = self.q_data[idx]
-        intensity_val = self.intensity_data[idx]
+        # x_pos가 데이터 범위를 벗어나는 경우 처리
+        if x_pos <= np.min(q_sorted):
+            q_val = q_sorted[0]
+            intensity_val = intensity_sorted[0]
+        elif x_pos >= np.max(q_sorted):
+            q_val = q_sorted[-1]
+            intensity_val = intensity_sorted[-1]
+        else:
+            # 선형 보간을 위해 x_pos 양쪽의 데이터 포인트 찾기
+            idx_right = np.searchsorted(q_sorted, x_pos)
+            idx_left = idx_right - 1
+            
+            # 선형 보간 계산
+            q_left, q_right = q_sorted[idx_left], q_sorted[idx_right]
+            i_left, i_right = intensity_sorted[idx_left], intensity_sorted[idx_right]
+            
+            # 실제 선택한 q 값 사용
+            q_val = x_pos
+            
+            # 강도는 선형 보간으로 계산
+            if q_right == q_left:  # 같은 q 값이 있을 경우 (드문 경우)
+                intensity_val = i_left
+            else:
+                weight = (x_pos - q_left) / (q_right - q_left)
+                intensity_val = i_left + weight * (i_right - i_left)
         
         # 라벨 텍스트 갱신
         line.label.setText(f"{prefix}\n(q = {q_val:.4f}, I = {intensity_val:.4f})")
@@ -446,8 +577,6 @@ class QRangeCorrectionHelper:
             q2 = self.selection_lines[1].value()
             return (min(q1, q2), max(q1, q2))
         return None
-
-# In contour_util_gui.py, add:
 
 class IndexRangeSelectionHelper:
     """Helper class for index range selection"""
