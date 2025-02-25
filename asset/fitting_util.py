@@ -4,6 +4,8 @@ from asset.contour_storage import FITTING_THRESHOLD
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from asset.contour_util import interpolate_contour_data
+    
 
 def gaussian(x, a, mu, sigma, offset):
     """
@@ -539,74 +541,14 @@ def plot_contour_extraction(
     found_peak_list,
     flag_adjust_mode=False,
     graph_option=None,
-    on_peak_selected_callback=None  # 콜백 함수 추가
+    on_peak_selected_callback=None
 ):
     """
     컨투어 플롯을 그리고, found_peak_list에 포함된 peak_name별로
     다른 색상으로 피크 궤적(peak_q vs. Time)을 표시한다.
     
-    - flag_adjust_mode = True 이면 피크 클릭(픽 이벤트) 가능
-      -> 클릭 시 해당 피크를 하이라이트 라인으로 표시
-      -> 'canvas.get_selected_peak_name()' 메서드로 선택된 peak_name 조회 가능
-    - flag_adjust_mode = False 이면 단순히 플롯만 보여주고 클릭 기능은 없음
-    - 축 라벨이나 범례는 표시하지 않음 (요청 사항)
-    
-    Parameters
-    ----------
-    contour_data : dict
-        {
-            "Time-temp": ([t0, t1, ...], [temp0, temp1, ...]),
-            "Data": [
-                {
-                    "Time": t_i,
-                    "Temperature": temp_i,
-                    "q": [...],
-                    "Intensity": [...]
-                }, ...
-            ]
-        }
-    tracked_peaks : dict
-        {
-            "Data": [
-                {
-                    "frame_index": ...,
-                    "Time": ...,
-                    "Temperature": ...,
-                    "peak_q": ...,
-                    "peak_Intensity": ...,
-                    "fwhm": ...,
-                    "peak_name": ...,
-                    "output_range": ...
-                }, ...
-            ]
-        }
-    found_peak_list : list
-        [ "peak_0_5.1234", "peak_0_6.2345", ... ]
-        완료된 피크들의 이름 목록
-    flag_adjust_mode : bool
-        True면 클릭 이벤트 활성화 (하이라이트 가능)
-        False면 클릭 이벤트 없이 컨투어+선만 표시
-    graph_option : dict or None
-        {
-            "figure_size": (12, 8),
-            "figure_dpi": 300,
-            "contour_levels": 100,
-            "contour_cmap": "inferno",
-            "contour_lower_percentile": 0.1,
-            "contour_upper_percentile": 98,
-            "contour_xlim": None,
-            "global_ylim": None,
-        }
-    
-    Returns
-    -------
-    matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg or None
-        - 반환된 canvas 에는 'get_selected_peak_name()' 메서드가 있어,
-          사용자가 클릭한 peak_name을 가져올 수 있음
-        - flag_adjust_mode=False 이고, 인터랙티브 모드가 아니면 plt.show()
+    캐싱된 보간 데이터를 사용하여 성능 개선.
     """
-
-    
     # 1) 그래프 옵션 기본값
     default_graph_option = {
         "figure_size": (12, 8),
@@ -622,26 +564,26 @@ def plot_contour_extraction(
         graph_option = {}
     final_opt = {**default_graph_option, **graph_option}
 
-    # 2) 컨투어 데이터 보간
-    times, _ = contour_data["Time-temp"]
-    all_data = contour_data["Data"]
+    # 2) 캐싱된 보간 데이터 사용
+    interpolated_data = interpolate_contour_data(contour_data)
+    grid_q = interpolated_data["grid_q"]
+    grid_time = interpolated_data["grid_time"]
+    grid_intensity = interpolated_data["grid_intensity"]
     
-    q_all = np.concatenate([entry["q"] for entry in all_data])
-    intensity_all = np.concatenate([entry["Intensity"] for entry in all_data])
-    time_all = np.concatenate([[entry["Time"]]*len(entry["q"]) for entry in all_data])
-
-    q_unique = np.unique(q_all)
-    t_unique = np.unique(time_all)
-    q_common = np.linspace(q_unique.min(), q_unique.max(), len(q_unique))
-    time_common = t_unique
-
-    grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata(
-        (q_all, time_all),
-        intensity_all,
-        (grid_q, grid_time),
-        method='nearest'
-    )
+    # 사용자 지정 percentile 또는 캐싱된 값 사용
+    lower_percentile = final_opt.get("contour_lower_percentile", 0.1)
+    upper_percentile = final_opt.get("contour_upper_percentile", 98)
+    
+    if lower_percentile == 0.1 and "lower_bound" in interpolated_data:
+        lower_bound = interpolated_data["lower_bound"]
+    else:
+        lower_bound = np.nanpercentile(grid_intensity, lower_percentile)
+        
+    if upper_percentile == 98 and "upper_bound" in interpolated_data:
+        upper_bound = interpolated_data["upper_bound"]
+    else:
+        upper_bound = np.nanpercentile(grid_intensity, upper_percentile)
+    
     if grid_intensity is None or np.isnan(grid_intensity).all():
         print("Warning: All interpolated intensity values are NaN.")
         # 빈 플롯 반환
@@ -656,9 +598,6 @@ def plot_contour_extraction(
     )
 
     # 4) 등고선 플롯
-    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
-    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
-
     cp = ax.contourf(
         grid_q, grid_time, grid_intensity,
         levels=final_opt["contour_levels"],
@@ -672,10 +611,6 @@ def plot_contour_extraction(
         ax.set_xlim(final_opt["contour_xlim"])
     if final_opt["global_ylim"] is not None:
         ax.set_ylim(final_opt["global_ylim"])
-
-    # (사용자 요청: 축 라벨, 범례 등은 표시하지 않음)
-    # ax.set_xlabel("q")
-    # ax.set_ylabel("Time")
 
     # 6) found_peak_list에 포함된 peak_name별로 산점도+라인 그리기
     data_by_peak = {}

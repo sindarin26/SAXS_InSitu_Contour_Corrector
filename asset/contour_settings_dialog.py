@@ -2,12 +2,16 @@
 import re
 from PyQt5 import QtWidgets, QtCore, QtGui
 from asset.contour_storage import PLOT_OPTIONS
+from asset.page_asset import LoadingDialog
 
 class ContourSettingsDialog(QtWidgets.QDialog):
     def __init__(self, callback, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Contour Plot Settings")
         self.callback = callback  # 옵션이 변경될 때마다 호출할 콜백 (예: replot)
+        
+        # 변경된 옵션을 임시로 저장할 딕셔너리
+        self.temp_options = {}
         
         # 메인 레이아웃에 스크롤 영역 추가 (옵션이 많을 경우 대비)
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -22,7 +26,16 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 4열 배치: 각 셀에 옵션 위젯(레이블+입력 위젯)
         self.grid_layout.setSpacing(10)
         
+        # 적용 버튼 추가
+        self.apply_button = QtWidgets.QPushButton("Apply Changes")
+        self.apply_button.clicked.connect(self.apply_all_changes)
+        main_layout.addWidget(self.apply_button)
+        
         self.build_fields()
+        
+        # 원본 옵션의 깊은 복사 생성
+        import copy
+        self.temp_options = copy.deepcopy(PLOT_OPTIONS['graph_option'])
 
     def build_fields(self):
         """
@@ -110,12 +123,17 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             else:
                 le_min.setText("")
                 le_max.setText("")
+            
+            # 값을 임시 저장하고 Enter 키 누를 때만 처리
             le_min.editingFinished.connect(
-                lambda k=key, pk=parent_key, lmin=le_min, lmax=le_max: self.on_lim_changed(k, pk, lmin, lmax)
+                lambda k=key, pk=parent_key, lmin=le_min, lmax=le_max: 
+                self.store_lim_change(k, pk, lmin, lmax)
             )
             le_max.editingFinished.connect(
-                lambda k=key, pk=parent_key, lmin=le_min, lmax=le_max: self.on_lim_changed(k, pk, lmin, lmax)
+                lambda k=key, pk=parent_key, lmin=le_min, lmax=le_max: 
+                self.store_lim_change(k, pk, lmin, lmax)
             )
+            
             h_layout.addWidget(QtWidgets.QLabel("Min"))
             h_layout.addWidget(le_min)
             h_layout.addWidget(QtWidgets.QLabel("Max"))
@@ -144,23 +162,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 # 오류 발생 시 기본값 사용
                 input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
             
-            def font_changed():
-                """폰트 변경 시 호출되는 콜백"""
-                try:
-                    font_family = input_widget.currentFont().family()
-                    if parent_key:
-                        PLOT_OPTIONS[parent_key][key] = font_family
-                    else:
-                        PLOT_OPTIONS[key] = font_family
-                    if self.callback:
-                        self.callback()
-                except Exception as e:
-                    print(f"Font change error: {str(e)}")
-                    # 오류 발생 시 기본값으로 복구
-                    input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
-            
-            input_widget.currentFontChanged.connect(lambda _: font_changed())
-
+            # 폰트 변경 시 임시 저장
+            input_widget.currentFontChanged.connect(
+                lambda font, k=key, pk=parent_key: 
+                self.store_font_change(k, pk, font.family())
+            )
 
         # 불리언 값인 경우
         elif isinstance(value, bool):
@@ -168,8 +174,10 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             input_widget.addItems(["True", "False"])
             input_widget.setCurrentText(str(value))
             input_widget.currentIndexChanged.connect(
-                lambda idx, k=key, pk=parent_key, w=input_widget: self.on_combo_changed(k, pk, w, is_bool=True)
+                lambda idx, k=key, pk=parent_key, w=input_widget: 
+                self.store_combo_change(k, pk, w, is_bool=True)
             )
+            
         # 컬러맵 옵션: "contour_cmap"는 미리 정의된 인기 컬러맵 목록을 콤보박스로 표시
         elif key == "contour_cmap":
             input_widget = QtWidgets.QComboBox()
@@ -178,8 +186,10 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             current_val = value if value in colormaps else "inferno"
             input_widget.setCurrentText(current_val)
             input_widget.currentIndexChanged.connect(
-                lambda idx, k=key, pk=parent_key, w=input_widget: self.on_combo_changed(k, pk, w)
+                lambda idx, k=key, pk=parent_key, w=input_widget: 
+                self.store_combo_change(k, pk, w)
             )
+            
         # tuple 또는 list (예: figure_size, width_ratios 등)인 경우
         elif isinstance(value, (tuple, list)):
             input_widget = QtWidgets.QWidget()
@@ -191,47 +201,54 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 le.setMaximumWidth(50)
                 le.setText(str(item))
                 le.editingFinished.connect(
-                    lambda k=key, pk=parent_key, edits=self._edits: self.on_list_changed(k, pk, edits)
+                    lambda k=key, pk=parent_key, edits=self._edits: 
+                    self.store_list_change(k, pk, edits)
                 )
                 hlayout.addWidget(le)
                 self._edits.append(le)
+                
         # 숫자(int, float)나 None (빈칸이면 None 적용)
         elif isinstance(value, (int, float)) or value is None:
             input_widget = QtWidgets.QLineEdit()
             if value is not None:
                 input_widget.setText(str(value))
             input_widget.editingFinished.connect(
-                lambda k=key, pk=parent_key, w=input_widget: self.on_lineedit_changed(k, pk, w)
+                lambda k=key, pk=parent_key, w=input_widget: 
+                self.store_lineedit_change(k, pk, w)
             )
+            
         # 문자열 (일반 텍스트, _text 항목 등)
         elif isinstance(value, str):
             input_widget = QtWidgets.QLineEdit()
             input_widget.setText(value)
             input_widget.editingFinished.connect(
-                lambda k=key, pk=parent_key, w=input_widget: self.on_lineedit_changed(k, pk, w)
+                lambda k=key, pk=parent_key, w=input_widget: 
+                self.store_lineedit_change(k, pk, w)
             )
+            
         else:
             # 기본 처리: QLineEdit로 문자열 변환
             input_widget = QtWidgets.QLineEdit()
             input_widget.setText(str(value))
             input_widget.editingFinished.connect(
-                lambda k=key, pk=parent_key, w=input_widget: self.on_lineedit_changed(k, pk, w)
+                lambda k=key, pk=parent_key, w=input_widget: 
+                self.store_lineedit_change(k, pk, w)
             )
             
         layout.addWidget(input_widget)
         return widget
 
-    def on_combo_changed(self, key, parent_key, widget, is_bool=False):
+    def store_combo_change(self, key, parent_key, widget, is_bool=False):
+        """콤보박스 값 변경을 임시 저장"""
         text = widget.currentText()
         new_value = True if is_bool and text == "True" else (False if is_bool else text)
         if parent_key:
-            PLOT_OPTIONS[parent_key][key] = new_value
+            self.temp_options[key] = new_value
         else:
-            PLOT_OPTIONS[key] = new_value
-        if self.callback:
-            self.callback()
+            self.temp_options[key] = new_value
 
-    def on_lineedit_changed(self, key, parent_key, widget):
+    def store_lineedit_change(self, key, parent_key, widget):
+        """라인에디트 값 변경을 임시 저장"""
         text = widget.text().strip()
         # 빈 문자열이면 None으로 처리
         if text == "":
@@ -246,13 +263,12 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 except ValueError:
                     new_value = text
         if parent_key:
-            PLOT_OPTIONS[parent_key][key] = new_value
+            self.temp_options[key] = new_value
         else:
-            PLOT_OPTIONS[key] = new_value
-        if self.callback:
-            self.callback()
+            self.temp_options[key] = new_value
 
-    def on_list_changed(self, key, parent_key, edits):
+    def store_list_change(self, key, parent_key, edits):
+        """리스트나 튜플 값 변경을 임시 저장"""
         new_list = []
         for le in edits:
             txt = le.text().strip()
@@ -268,13 +284,12 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                         new_list.append(txt)
         new_value = new_list if new_list else None
         if parent_key:
-            PLOT_OPTIONS[parent_key][key] = new_value
+            self.temp_options[key] = new_value
         else:
-            PLOT_OPTIONS[key] = new_value
-        if self.callback:
-            self.callback()
+            self.temp_options[key] = new_value
 
-    def on_lim_changed(self, key, parent_key, le_min, le_max):
+    def store_lim_change(self, key, parent_key, le_min, le_max):
+        """limit 값 변경을 임시 저장"""
         txt_min = le_min.text().strip()
         txt_max = le_max.text().strip()
         # 하나라도 빈칸이면 None (자동)
@@ -286,26 +301,37 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             except ValueError:
                 new_value = None
         if parent_key:
-            PLOT_OPTIONS[parent_key][key] = new_value
+            self.temp_options[key] = new_value
         else:
-            PLOT_OPTIONS[key] = new_value
-        if self.callback:
-            self.callback()
+            self.temp_options[key] = new_value
 
-    # def on_font_changed(self, key, parent_key, widget):
-    #     selected_font = widget.currentText()
-    #     available_fonts = QtGui.QFontDatabase().families()
-    #     if selected_font not in available_fonts:
-    #         widget.blockSignals(True)
-    #         widget.setCurrentText(widget.previous_font)
-    #         widget.blockSignals(False)
-    #         QtWidgets.QMessageBox.warning(self, "Font Warning",
-    #                                       f"'{selected_font}' is not available on this system.\nReverting to previous font.")
-    #         return
-    #     widget.previous_font = selected_font
-    #     if parent_key:
-    #         PLOT_OPTIONS[parent_key][key] = selected_font
-    #     else:
-    #         PLOT_OPTIONS[key] = selected_font
-    #     if self.callback:
-    #         self.callback()
+    def store_font_change(self, key, parent_key, font_family):
+        """폰트 변경을 임시 저장"""
+        if parent_key:
+            self.temp_options[key] = font_family
+        else:
+            self.temp_options[key] = font_family
+
+    def apply_all_changes(self):
+        """모든 변경사항을 적용하고 콜백 호출"""
+        loading = LoadingDialog(self, "Applying settings and updating plot...")
+        loading.show()
+        QtWidgets.QApplication.processEvents()
+        
+        try:
+            # 임시 저장된 변경사항을 PLOT_OPTIONS에 적용
+            for key, value in self.temp_options.items():
+                PLOT_OPTIONS['graph_option'][key] = value
+                
+            # 콜백 호출 (플롯 업데이트)
+            if self.callback:
+                self.callback()
+        finally:
+            loading.close()
+
+    def keyPressEvent(self, event):
+        """Enter 키를 누르면 변경사항 적용"""
+        if event.key() == QtCore.Qt.Key_Return or event.key() == QtCore.Qt.Key_Enter:
+            self.apply_all_changes()
+        else:
+            super().keyPressEvent(event)

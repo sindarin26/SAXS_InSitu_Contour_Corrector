@@ -127,59 +127,69 @@ class ContourPlotPage(QtCore.QObject):
         if not DATA.get('contour_data'):
             print("No contour data available")
             return
+
+        # 로딩 다이얼로그 표시
+        loading = LoadingDialog(self.main, "Processing contour data...")
+        loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
+        loading.show()
+        QtWidgets.QApplication.processEvents()
             
-        # Calculate minimum size needed for the figure
-        fig_size = PLOT_OPTIONS['graph_option']['figure_size']
-        dpi = PLOT_OPTIONS['graph_option']['figure_dpi']
-        min_width = int(fig_size[0] * dpi / 4)  # 최소 크기는 원본의 1/4
-        min_height = int(fig_size[1] * dpi / 4)
-        
-        # Set minimum size for GraphicsView
-        self.GV_contour.setMinimumSize(min_width, min_height)
+        try:
+            # Calculate minimum size needed for the figure
+            fig_size = PLOT_OPTIONS['graph_option']['figure_size']
+            dpi = PLOT_OPTIONS['graph_option']['figure_dpi']
+            min_width = int(fig_size[0] * dpi / 4)  # 최소 크기는 원본의 1/4
+            min_height = int(fig_size[1] * dpi / 4)
             
-        # Clear existing layout
-        if self.GV_contour.layout():
-            QtWidgets.QWidget().setLayout(self.GV_contour.layout())
+            # Set minimum size for GraphicsView
+            self.GV_contour.setMinimumSize(min_width, min_height)
+                
+            # Clear existing layout
+            if self.GV_contour.layout():
+                QtWidgets.QWidget().setLayout(self.GV_contour.layout())
+                
+            # Create layout
+            layout = QtWidgets.QVBoxLayout()
             
-        # Create layout
-        layout = QtWidgets.QVBoxLayout()
-        
-        # Create figure with original size from PLOT_OPTIONS
-        canvas = plot_contour(
-            DATA['contour_data'],
-            temp=PLOT_OPTIONS['temp'],
-            legend=PLOT_OPTIONS['legend'],
-            graph_option=PLOT_OPTIONS['graph_option'],
-            GUI=True
-        )
-        
-        if canvas:
-            # Create a container widget
-            container = QtWidgets.QWidget()
-            container_layout = QtWidgets.QVBoxLayout(container)
-            container_layout.setContentsMargins(0, 0, 0, 0)
-            container_layout.addWidget(canvas)
-            
-            # Set policies
-            canvas.setSizePolicy(
-                QtWidgets.QSizePolicy.Ignored,
-                QtWidgets.QSizePolicy.Ignored
-            )
-            container.setSizePolicy(
-                QtWidgets.QSizePolicy.Expanding,
-                QtWidgets.QSizePolicy.Expanding
+            # Create figure with original size from PLOT_OPTIONS
+            canvas = plot_contour(
+                DATA['contour_data'],
+                temp=PLOT_OPTIONS['temp'],
+                legend=PLOT_OPTIONS['legend'],
+                graph_option=PLOT_OPTIONS['graph_option'],
+                GUI=True
             )
             
-            # Add to main layout
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(container)
-            
-            # Set up GraphicsView
-            self.GV_contour.setLayout(layout)
-            self.canvas = canvas
-            
-            # Initial resize
-            self.resize_figure_to_view()
+            if canvas:
+                # Create a container widget
+                container = QtWidgets.QWidget()
+                container_layout = QtWidgets.QVBoxLayout(container)
+                container_layout.setContentsMargins(0, 0, 0, 0)
+                container_layout.addWidget(canvas)
+                
+                # Set policies
+                canvas.setSizePolicy(
+                    QtWidgets.QSizePolicy.Ignored,
+                    QtWidgets.QSizePolicy.Ignored
+                )
+                container.setSizePolicy(
+                    QtWidgets.QSizePolicy.Expanding,
+                    QtWidgets.QSizePolicy.Expanding
+                )
+                
+                # Add to main layout
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.addWidget(container)
+                
+                # Set up GraphicsView
+                self.GV_contour.setLayout(layout)
+                self.canvas = canvas
+                
+                # Initial resize
+                self.resize_figure_to_view()
+        finally:
+            # 로딩 다이얼로그 닫기
+            loading.close()
 
     def resize_figure_to_view(self):
         """Resize the figure to fit the view while maintaining aspect ratio"""

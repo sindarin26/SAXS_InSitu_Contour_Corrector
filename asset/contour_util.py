@@ -63,10 +63,75 @@ def extract_contour_data(selected_series, extracted_data):
         ]
     }
 
+def interpolate_contour_data(contour_data, force_recalculate=False):
+    """
+    컨투어 데이터에 대한 보간을 수행하거나 기존 캐시된 보간 데이터를 반환합니다.
+    
+    Parameters
+    ----------
+    contour_data : dict
+        컨투어 데이터 딕셔너리
+    force_recalculate : bool
+        True이면 캐시된 보간 데이터가 있더라도 강제로 재계산
+        
+    Returns
+    -------
+    dict
+        보간된 데이터 (grid_q, grid_time, grid_intensity)가 포함된 사전
+    """
+    import numpy as np
+    from scipy.interpolate import griddata
+    
+    # 캐시 사용 여부 결정
+    if not force_recalculate and "interpolated_data" in contour_data and contour_data["interpolated_data"] is not None:
+        print("DEBUG: Using cached interpolated data!") # 추가
+        return contour_data["interpolated_data"]
+    
+    print("DEBUG: Recalculating interpolated data!") # 추가
+
+    
+    # 새로 보간 수행
+    times, _ = contour_data["Time-temp"]
+    
+    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
+    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
+    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    
+    q_unique = np.unique(q_all)
+    time_unique = np.unique(time_all)
+    
+    q_common = np.linspace(np.min(q_all), np.max(q_all), len(q_unique))
+    time_common = time_unique
+    
+    grid_q, grid_time = np.meshgrid(q_common, time_common)
+    grid_intensity = griddata(
+        (q_all, time_all), 
+        intensity_all, 
+        (grid_q, grid_time), 
+        method='nearest'
+    )
+    
+    # 보간 결과 캐싱
+    contour_data["interpolated_data"] = {
+        "grid_q": grid_q,
+        "grid_time": grid_time,
+        "grid_intensity": grid_intensity,
+        "q_range": (np.min(q_all), np.max(q_all)),
+        "time_range": (np.min(time_all), np.max(time_all)),
+        "lower_bound": np.nanpercentile(grid_intensity, 0.1),
+        "upper_bound": np.nanpercentile(grid_intensity, 98)
+    }
+    
+    return contour_data["interpolated_data"]
+
+
 def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=False):
     """
     Generate contour plot with interpolated data, optionally with a Temperature vs Time subplot.
+    
+    사용 캐싱된 보간 데이터를 사용하여 성능 개선
     """
+    
     default_graph_option = {
         "figure_size": (12, 8),
         "figure_dpi": 300,
@@ -108,19 +173,28 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
     if graph_option is None:
         graph_option = {}
     final_opt = {**default_graph_option, **graph_option}
+    
+    # 캐싱된 보간 데이터 사용 (성능 개선)
+    interpolated_data = interpolate_contour_data(contour_data)
+    grid_q = interpolated_data["grid_q"]
+    grid_time = interpolated_data["grid_time"]
+    grid_intensity = interpolated_data["grid_intensity"]
+    
+    # 사용자 지정 percentile 또는 캐싱된 값 사용
+    lower_percentile = final_opt.get("contour_lower_percentile", 0.1)
+    upper_percentile = final_opt.get("contour_upper_percentile", 98)
+    
+    if lower_percentile == 0.1 and "lower_bound" in interpolated_data:
+        lower_bound = interpolated_data["lower_bound"]
+    else:
+        lower_bound = np.nanpercentile(grid_intensity, lower_percentile)
+        
+    if upper_percentile == 98 and "upper_bound" in interpolated_data:
+        upper_bound = interpolated_data["upper_bound"]
+    else:
+        upper_bound = np.nanpercentile(grid_intensity, upper_percentile)
+    
     times, temperatures = contour_data["Time-temp"]
-    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
-    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
-    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
-    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
-    time_common = np.unique(time_all)
-    grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
-    if grid_intensity is None or np.isnan(grid_intensity).all():
-        print("Warning: All interpolated intensity values are NaN. Check input data.")
-        return
-    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
-    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
     
     if temp:
         fig, (ax_contour, ax_temp) = plt.subplots(
@@ -680,7 +754,11 @@ def track_peaks(contour_data, input_range, tracking_option=None):
 def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
     """
     contour_data를 기반으로 칸투어 플롯을 그리고, 그 위에 peak_data의 피크 위치들을 빨간 원으로 표시.
+    캐싱된 보간 데이터를 사용하여 성능 개선.
     """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    
     default_graph_option = {
         "figure_size": (12, 8),
         "figure_dpi": 300,
@@ -693,48 +771,67 @@ def plot_contour_with_peaks(contour_data, peak_data, graph_option=None):
         "global_ylim": None,
         "contour_xlim": None,
     }
+    
     if graph_option is None:
         graph_option = {}
     final_opt = {**default_graph_option, **graph_option}
-    times, _ = contour_data["Time-temp"]
-    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
-    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
-    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
-    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
-    time_common = np.unique(time_all)
-    grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
-    if grid_intensity is None or np.isnan(grid_intensity).all():
-        print("Warning: All interpolated intensity values are NaN. Check input data.")
-        return
-    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
-    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
+    
+    # 캐싱된 보간 데이터 사용
+    interpolated_data = interpolate_contour_data(contour_data)
+    grid_q = interpolated_data["grid_q"]
+    grid_time = interpolated_data["grid_time"]
+    grid_intensity = interpolated_data["grid_intensity"]
+    
+    # 사용자 지정 percentile 또는 캐싱된 값 사용
+    lower_percentile = final_opt.get("contour_lower_percentile", 0.1)
+    upper_percentile = final_opt.get("contour_upper_percentile", 98)
+    
+    if lower_percentile == 0.1 and "lower_bound" in interpolated_data:
+        lower_bound = interpolated_data["lower_bound"]
+    else:
+        lower_bound = np.nanpercentile(grid_intensity, lower_percentile)
+        
+    if upper_percentile == 98 and "upper_bound" in interpolated_data:
+        upper_bound = interpolated_data["upper_bound"]
+    else:
+        upper_bound = np.nanpercentile(grid_intensity, upper_percentile)
+    
+    # 플롯 생성 및 표시
     fig, ax = plt.subplots(figsize=final_opt["figure_size"], dpi=final_opt["figure_dpi"])
+    
     cp = ax.contourf(grid_q, grid_time, grid_intensity,
                      levels=final_opt["contour_levels"],
                      cmap=final_opt["contour_cmap"],
                      vmin=lower_bound,
                      vmax=upper_bound)
+                     
     if final_opt["contour_xlim"] is not None:
         ax.set_xlim(final_opt["contour_xlim"])
     if final_opt["global_ylim"] is not None:
         ax.set_ylim(final_opt["global_ylim"])
+    
     ax.set_xlabel(final_opt["contour_xlabel_text"], fontsize=14, fontweight='bold')
     ax.set_ylabel(final_opt["contour_ylabel_text"], fontsize=14, fontweight='bold')
     ax.set_title("Contour Plot with Peak Positions", fontsize=16, fontweight='bold')
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+    
+    # 피크 포인트 추가
     added_label = False
     for entry in peak_data["Data"]:
         peak_q = entry.get("peak_q")
         time_val = entry.get("Time")
         if peak_q is not None and not np.isnan(peak_q):
             if not added_label:
-                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, label="Peak Position", zorder=10)
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", 
+                          s=100, label="Peak Position", zorder=10)
                 added_label = True
             else:
-                ax.scatter(peak_q, time_val, color="red", edgecolors="black", s=100, zorder=10)
+                ax.scatter(peak_q, time_val, color="red", edgecolors="black", 
+                          s=100, zorder=10)
+    
     ax.legend()
     plt.show()
+
 def interactive_peak_adjustment(contour_data, tracked_peaks, original_sdd, experiment_energy, converted_energy=8.042):
     """
     대화형으로 피크를 재조정하는 함수입니다. contour plot에서 피크를 클릭하면
@@ -1143,51 +1240,19 @@ def add_corrected_peak_q(tracked_peaks, fit_params, peak_fit_temp_range, origina
 
 def calculate_sdd_for_tracked_peaks_refactored(contour_data, tracked_peaks, original_sdd, experiment_energy, converted_energy=8.042):
     """
-    각 타임프레임의 contour_data["Data"] 항목에 대해,
-      1. 원래의 q 리스트를 "q_raw"라는 키에 백업하고,
-      2. 해당 타임프레임에 대응하는 tracked_peaks["Data"] 항목에 corrected_SDD와 corrected_peak_q가 존재하면,
-         re-calculation을 통해 새 SDD에 맞는 q 리스트를 계산하여 "q" 값을 덮어쓴다.
+    각 타임프레임의 q 리스트를 SDD 보정하는 함수.
     
-    데이터 체계
-    -----------
-    - contour_data["Data"]의 각 항목은 원래 q 리스트(입력 형식에 따라 q 또는 CuKα 기준의 2θ 값)를 포함한다.
-    - tracked_peaks["Data"]의 각 항목은 같은 타임프레임에 해당하며, 
-      corrected_SDD와 corrected_peak_q가 있으면 해당 타임프레임의 q 리스트를 새 SDD에 맞게 재계산할 대상이다.
-    - converted_energy가 None이면 입력/출력 모두 q 값으로 처리되고,
-      converted_energy가 주어지면 입력 데이터는 CuKα 기준의 2θ 값(°)으로 저장되어 있으며, 최종 출력도 2θ 값 형식으로 처리된다.
-    
-    계산 절차
-    -----------
-    1) 각 항목에 대해 원래 q 리스트를 "q_raw"에 백업한다.
-    2) 만약 해당 타임프레임의 tracked_peaks 데이터에 corrected_SDD와 corrected_peak_q가 존재하면,
-       recalc_q_list 함수를 사용하여 q_raw를 원래 SDD(original_sdd)에서 보정 SDD(corrected_SDD)를 적용한 
-       새 q 리스트로 재계산한다.
-    3) 재계산된 q 리스트로 해당 항목의 "q" 값을 덮어쓴다.
-    
-    Parameters
-    ----------
-    contour_data : dict
-        contour 데이터가 저장된 dict. "Data" 키 아래 각 항목은 최소한 "q" (및 "Intensity", "Time" 등)를 포함.
-    tracked_peaks : dict
-        피크 추적 결과 데이터가 저장된 dict. "Data" 키 아래 각 항목은 피크 관련 정보와 함께 corrected_SDD,
-        corrected_peak_q 등이 포함될 수 있음.
-    original_sdd : float
-        원래 사용된 SDD (mm)
-    experiment_energy : float
-        q/2θ 변환 시 사용할 실험 X-ray 에너지 (keV)
-    converted_energy : float, optional
-        입력 데이터가 CuKα 기준으로 변환된 에너지 (keV). None이면 입력/출력은 q 값으로 처리.
-    
-    Returns
-    -------
-    dict
-        새 SDD 보정이 적용된 contour_data (각 항목의 "q" 값이 재계산됨).
+    데이터가 변경되면 보간 데이터 캐시를 무효화합니다.
     """
+    # 기존 코드는 그대로 유지...
     # contour_data의 각 항목에 대해 원래 q 리스트 백업 (q_raw)하기
     for entry in contour_data["Data"]:
         if "q_raw" not in entry:
             # np.array()로 복사하면 안전하게 백업 가능 (리스트일 경우에도)
             entry["q_raw"] = np.array(entry["q"])
+    
+    # 데이터 변경 여부를 추적하기 위한 플래그
+    data_modified = False
     
     # contour_data와 tracked_peaks의 항목이 같은 순서라고 가정하고 index-wise로 처리
     for i, entry in enumerate(contour_data["Data"]):
@@ -1211,9 +1276,16 @@ def calculate_sdd_for_tracked_peaks_refactored(contour_data, tracked_peaks, orig
             )
             # 재계산된 q 리스트로 덮어쓰기
             entry["q"] = new_q
-        # 만약 해당 타임프레임에 보정 정보가 없다면 원래 q (또는 q_raw) 그대로 유지
+            data_modified = True
+    
+    # 데이터가 변경되었으면 보간 데이터 캐시 무효화
+    if data_modified:
+        # 캐시 무효화 - 보간 데이터 삭제
+        if "interpolated_data" in contour_data:
+            del contour_data["interpolated_data"]
     
     return contour_data
+
 
 
 # ============================================================

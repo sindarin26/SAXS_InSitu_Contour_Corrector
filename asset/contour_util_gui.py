@@ -4,9 +4,10 @@ import pyqtgraph as pg
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
 import numpy as np
 from asset.contour_storage import PLOT_OPTIONS
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from asset.contour_util import interpolate_contour_data
 
 class DraggableLine(pg.InfiniteLine):
     """Draggable vertical line with label"""
@@ -260,7 +261,7 @@ class TempCorrectionHelper:
 def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     """
     컨투어 플롯과 피크 위치를 QtGraphics View에 맞게 canvas로 반환하는 함수.
-    피크는 시간 순서대로 선으로 연결되어 표시됨.
+    캐싱된 보간 데이터를 사용하여 성능 개선.
     """
     
     default_graph_option = {
@@ -273,27 +274,34 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
         "global_ylim": PLOT_OPTIONS["graph_option"]["global_ylim"],
         "contour_xlim": PLOT_OPTIONS["graph_option"]["contour_xlim"]
     }
+    
     if graph_option is None:
         graph_option = {}
     final_opt = {**default_graph_option, **graph_option}
 
-    # Prepare contour data
-    times, _ = contour_data["Time-temp"]
-    q_all = np.concatenate([entry["q"] for entry in contour_data["Data"]])
-    intensity_all = np.concatenate([entry["Intensity"] for entry in contour_data["Data"]])
-    time_all = np.concatenate([[entry["Time"]] * len(entry["q"]) for entry in contour_data["Data"]])
+    # 캐싱된 보간 데이터 사용
+    interpolated_data = interpolate_contour_data(contour_data)
+    grid_q = interpolated_data["grid_q"]
+    grid_time = interpolated_data["grid_time"]
+    grid_intensity = interpolated_data["grid_intensity"]
     
-    q_common = np.linspace(np.min(q_all), np.max(q_all), len(np.unique(q_all)))
-    time_common = np.unique(time_all)
-    grid_q, grid_time = np.meshgrid(q_common, time_common)
-    grid_intensity = griddata((q_all, time_all), intensity_all, (grid_q, grid_time), method='nearest')
+    # 사용자 지정 percentile 또는 캐싱된 값 사용
+    lower_percentile = final_opt.get("contour_lower_percentile", 0.1)
+    upper_percentile = final_opt.get("contour_upper_percentile", 98)
+    
+    if lower_percentile == 0.1 and "lower_bound" in interpolated_data:
+        lower_bound = interpolated_data["lower_bound"]
+    else:
+        lower_bound = np.nanpercentile(grid_intensity, lower_percentile)
+        
+    if upper_percentile == 98 and "upper_bound" in interpolated_data:
+        upper_bound = interpolated_data["upper_bound"]
+    else:
+        upper_bound = np.nanpercentile(grid_intensity, upper_percentile)
     
     if grid_intensity is None or np.isnan(grid_intensity).all():
         print("Warning: All interpolated intensity values are NaN. Check input data.")
         return None
-
-    lower_bound = np.nanpercentile(grid_intensity, final_opt["contour_lower_percentile"])
-    upper_bound = np.nanpercentile(grid_intensity, final_opt["contour_upper_percentile"])
 
     # Create figure and plot contour
     fig, ax = plt.subplots(figsize=final_opt["figure_size"], dpi=final_opt["figure_dpi"])
@@ -335,6 +343,7 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     canvas = FigureCanvas(fig)
     canvas.draw()
     return canvas
+
 
 class QRangeCorrectionHelper:
     """Q 범위 선택을 위한 헬퍼 클래스"""

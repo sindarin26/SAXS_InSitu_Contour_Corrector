@@ -34,10 +34,18 @@ class PeakExportDialog(QtWidgets.QDialog):
         """
         if contour_data is None and DATA.get('contour_data'):
             contour_data = DATA.get('contour_data')
-            
+        
+        # 원본 데이터 깊은 복사
+        peak_contour_data = copy.deepcopy(contour_data) if contour_data else None
+        
+        # 캐시된 보간 데이터가 있으면 함께 복사 (깊은 복사 X - 불필요한 메모리 사용 방지)
+        if peak_contour_data and 'interpolated_data' in contour_data:
+            peak_contour_data['interpolated_data'] = contour_data['interpolated_data']
+            print("DEBUG: Interpolated data cache copied to peak tracking data")
+        
         self.PEAK_EXTRACT_DATA = {
             "NOTE": "",
-            "PEAK": copy.deepcopy(contour_data) if contour_data else None,
+            "PEAK": peak_contour_data,
             "tracked_peaks": {
                 "Series": contour_data["Series"] if contour_data else "",
                 "Time-temp": contour_data["Time-temp"] if contour_data else ([], []),
@@ -45,6 +53,7 @@ class PeakExportDialog(QtWidgets.QDialog):
             },
             "found_peak_list": []
         }
+
 
     def setup_connections(self):
         """Setup signal connections"""

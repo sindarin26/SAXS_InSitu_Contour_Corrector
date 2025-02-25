@@ -5,6 +5,7 @@ import pyqtgraph as pg
 from asset.contour_storage import PARAMS, FITTING_THRESHOLD
 from asset.fitting_util import find_peak_extraction, run_automatic_tracking, plot_contour_extraction
 from asset.contour_util_gui import QRangeCorrectionHelper
+from asset.page_asset import LoadingDialog
 
 class PeakTrackingPage(QtCore.QObject):
     """
@@ -530,45 +531,54 @@ class PeakTrackingPage(QtCore.QObject):
         print(f"Updating contour plot with {len(self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'])} tracked peaks")
         print(f"Found peak list: {self.main.PEAK_EXTRACT_DATA['found_peak_list']}")
         
-        # Create or update the list of peaks to show
-        # For auto-tracking, include the current_peak_name even if not in found_peak_list
-        peaks_to_show = list(self.main.PEAK_EXTRACT_DATA['found_peak_list'])
-        if self.current_peak_name and self.current_peak_name not in peaks_to_show:
-            peaks_to_show.append(self.current_peak_name)
-            
-        # Create contour plot
-        # 피크 선택 콜백 함수 정의
-        def on_peak_selected(peak_name, frame_index):
-            if self.manual_adjust:
-                self.current_peak_name = peak_name
-                self.current_index = frame_index
-                self.L_current_status_2.setText(
-                    f"Selected peak {peak_name} at frame {frame_index}. Click Next to adjust it."
-                )
-                self.update_ui_state()
-    
-        # Create contour plot with callback
-        self.contour_canvas = plot_contour_extraction(
-            contour_data=self.contour_data,
-            tracked_peaks=self.main.PEAK_EXTRACT_DATA['tracked_peaks'],
-            found_peak_list=peaks_to_show,
-            flag_adjust_mode=self.manual_adjust,
-            on_peak_selected_callback=on_peak_selected  # 콜백 전달
-        )
+        # 로딩 다이얼로그 추가
+        loading = LoadingDialog(self.main, "피크 데이터 컨투어 처리중...")
+        loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
+        loading.show()
+        QtWidgets.QApplication.processEvents()
         
-        if self.contour_canvas:
-            print("Contour canvas created successfully")
-            # Clear any existing layout
-            if self.QGV_contour.layout():
-                QtWidgets.QWidget().setLayout(self.QGV_contour.layout())
+        try:
+            # Create or update the list of peaks to show
+            # For auto-tracking, include the current_peak_name even if not in found_peak_list
+            peaks_to_show = list(self.main.PEAK_EXTRACT_DATA['found_peak_list'])
+            if self.current_peak_name and self.current_peak_name not in peaks_to_show:
+                peaks_to_show.append(self.current_peak_name)
                 
-            # Set new layout with canvas
-            layout = QtWidgets.QVBoxLayout()
-            layout.addWidget(self.contour_canvas)
-            self.QGV_contour.setLayout(layout)
-            self.QGV_contour.update()  # Force update
-        else:
-            print("Failed to create contour canvas")
+            # 피크 선택 콜백 함수 정의
+            def on_peak_selected(peak_name, frame_index):
+                if self.manual_adjust:
+                    self.current_peak_name = peak_name
+                    self.current_index = frame_index
+                    self.L_current_status_2.setText(
+                        f"Selected peak {peak_name} at frame {frame_index}. Click Next to adjust it."
+                    )
+                    self.update_ui_state()
+        
+            # Create contour plot with callback
+            self.contour_canvas = plot_contour_extraction(
+                contour_data=self.contour_data,
+                tracked_peaks=self.main.PEAK_EXTRACT_DATA['tracked_peaks'],
+                found_peak_list=peaks_to_show,
+                flag_adjust_mode=self.manual_adjust,
+                on_peak_selected_callback=on_peak_selected  # 콜백 전달
+            )
+            
+            if self.contour_canvas:
+                print("Contour canvas created successfully")
+                # Clear any existing layout
+                if self.QGV_contour.layout():
+                    QtWidgets.QWidget().setLayout(self.QGV_contour.layout())
+                    
+                # Set new layout with canvas
+                layout = QtWidgets.QVBoxLayout()
+                layout.addWidget(self.contour_canvas)
+                self.QGV_contour.setLayout(layout)
+                self.QGV_contour.update()  # Force update
+            else:
+                print("Failed to create contour canvas")
+        finally:
+            # 로딩 다이얼로그 닫기
+            loading.close()
     
     def on_next(self):
         """

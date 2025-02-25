@@ -9,6 +9,8 @@ import pyqtgraph as pg
 import traceback
 import copy
 
+from asset.page_asset import LoadingDialog
+
 class SDDFittingPage(QtCore.QObject):
     def __init__(self, main_dialog):
         super().__init__()
@@ -245,17 +247,19 @@ class SDDFittingPage(QtCore.QObject):
 
         보정 계산(add_corrected_peak_q, calculate_sdd_for_tracked_peaks_refactored)
         등은 이 함수 호출 전에 다른 곳(예: on_apply_range)에서 끝낸다.
+        
+        임시 보간 데이터를 사용하여 성능 향상.
         """
+        # 로딩 다이얼로그 생성
+        loading = LoadingDialog(self.main, "컨투어 미리보기 생성중...")
+        loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
+        loading.show()
+        QtWidgets.QApplication.processEvents()
+        
         try:
-            # 1) 기존 레이아웃 초기화 (로딩 메시지)
+            # 1) 기존 레이아웃 초기화
             if self.ui.QGV_final.layout():
                 QtWidgets.QWidget().setLayout(self.ui.QGV_final.layout())
-
-            loading = QtWidgets.QLabel("Preparing preview plot...")
-            loading.setAlignment(QtCore.Qt.AlignCenter)
-            self.ui.QGV_final.setLayout(QtWidgets.QVBoxLayout())
-            self.ui.QGV_final.layout().addWidget(loading)
-            QtWidgets.QApplication.processEvents()
 
             # 2) 매개변수로 contour_data를 직접 받지 않았다면,
             #    self.temp_data['contour_data']를 사용
@@ -263,6 +267,19 @@ class SDDFittingPage(QtCore.QObject):
                 if not self.temp_data or 'contour_data' not in self.temp_data:
                     raise RuntimeError("No contour_data available for preview.")
                 contour_data = self.temp_data['contour_data']
+
+            # 보간 데이터를 생성하고 임시 저장 (SDD correction에 특화된 임시 보간 데이터)
+            # 수정: None 체크 추가 
+            if 'interpolated_data' not in self.temp_data or self.temp_data['interpolated_data'] is None:
+                # 이 함수는 contour_util.py에서 가져온 것이지만 
+                # 결과는 self.temp_data에 저장됩니다 (contour_data에 저장하지 않음)
+                from asset.contour_util import interpolate_contour_data
+                interpolated_data = interpolate_contour_data(contour_data, force_recalculate=True)
+                self.temp_data['interpolated_data'] = interpolated_data
+                print("DEBUG: Created temporary interpolated data for preview")
+            else:
+                interpolated_data = self.temp_data['interpolated_data']
+                print("DEBUG: Using existing temporary interpolated data for preview")
 
             preview_graph_option = PLOT_OPTIONS['graph_option'].copy()
             preview_graph_option['figure_title_enable'] = False
@@ -273,26 +290,46 @@ class SDDFittingPage(QtCore.QObject):
             preview_graph_option['contour_xlabel_enable'] = False
             preview_graph_option['contour_ylabel_enable'] = False
 
-            # 3) 실제 Matplotlib 플롯 생성
-            layout = QtWidgets.QVBoxLayout()
-            canvas = plot_contour(
-                contour_data,
-                temp=False,
-                legend=False,
-                graph_option=PLOT_OPTIONS['graph_option'],
-                GUI=True
-            )
-
+            # 3) 실제 Matplotlib 플롯 생성 - 직접 보간 데이터 사용
+            import matplotlib.pyplot as plt
+            from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+            import numpy as np
+            
+            fig, ax = plt.subplots(figsize=PLOT_OPTIONS['graph_option']['figure_size'], 
+                                dpi=PLOT_OPTIONS['graph_option']['figure_dpi'])
+            
+            grid_q = interpolated_data['grid_q']
+            grid_time = interpolated_data['grid_time'] 
+            grid_intensity = interpolated_data['grid_intensity']
+            
+            # 경계값 가져오기
+            lower_bound = interpolated_data.get('lower_bound', 
+                        np.nanpercentile(grid_intensity, PLOT_OPTIONS['graph_option']['contour_lower_percentile']))
+            upper_bound = interpolated_data.get('upper_bound',
+                        np.nanpercentile(grid_intensity, PLOT_OPTIONS['graph_option']['contour_upper_percentile']))
+            
+            cp = ax.contourf(grid_q, grid_time, grid_intensity,
+                            levels=PLOT_OPTIONS['graph_option']['contour_levels'],
+                            cmap=PLOT_OPTIONS['graph_option']['contour_cmap'],
+                            vmin=lower_bound, vmax=upper_bound)
+            
+            # 축 범위 설정 적용
+            if PLOT_OPTIONS['graph_option'].get('contour_xlim'):
+                ax.set_xlim(PLOT_OPTIONS['graph_option']['contour_xlim'])
+            if PLOT_OPTIONS['graph_option'].get('global_ylim'):
+                ax.set_ylim(PLOT_OPTIONS['graph_option']['global_ylim'])
+            
+            canvas = FigureCanvas(fig)
+            
             # 4) canvas를 QGV_final 레이아웃에 연결
-            if canvas:
-                if self.ui.QGV_final.layout():
-                    QtWidgets.QWidget().setLayout(self.ui.QGV_final.layout())
-                layout.addWidget(canvas)
-                self.ui.QGV_final.setLayout(layout)
+            if self.ui.QGV_final.layout():
+                QtWidgets.QWidget().setLayout(self.ui.QGV_final.layout())
+            
+            layout = QtWidgets.QVBoxLayout()
+            layout.addWidget(canvas)
+            self.ui.QGV_final.setLayout(layout)
 
-                print("DEBUG: Preview plot created successfully")
-            else:
-                raise RuntimeError("Failed to create preview plot")
+            print("DEBUG: Preview plot created successfully")
 
         except Exception as e:
             print(f"DEBUG: Error in show_preview_contour: {str(e)}")
@@ -302,6 +339,10 @@ class SDDFittingPage(QtCore.QObject):
                 "Error",
                 f"Failed to generate preview: {str(e)}"
             )
+        finally:
+            # 로딩 다이얼로그 닫기
+            loading.close()
+
 
     def on_back(self):
         """Handle back button click"""
@@ -371,8 +412,6 @@ class SDDFittingPage(QtCore.QObject):
                 converted_energy=PARAMS['converted_energy']
             )
 
-            print(f"DEBUG: Corrected peaks: {corrected_peaks}")
-
             # 4) contour_data 재계산
             corrected_contour = self.calculate_sdd_for_tracked_peaks_refactored(
                 DATA['contour_data'],
@@ -382,10 +421,11 @@ class SDDFittingPage(QtCore.QObject):
                 PARAMS['converted_energy']
             )
 
-            # 5) 결과 저장 및 미리보기
+            # 5) 결과 저장 및 미리보기 - 기존 데이터 + 보간 데이터 초기화
             self.temp_data = {
                 'tracked_peaks': corrected_peaks,
-                'contour_data': corrected_contour
+                'contour_data': corrected_contour,
+                'interpolated_data': None  # 초기화만 - show_preview_contour에서 생성됨
             }
             self.show_preview_contour(corrected_contour)
 
@@ -395,18 +435,34 @@ class SDDFittingPage(QtCore.QObject):
             self.current_step = 'preview'
             self.L_current_status_3.setText("Preview of Corrected Contour")
 
+
     def on_final_apply(self):
-        """Apply temporary data to global DATA"""
+        """Apply temporary data to global DATA including interpolated data"""
         if self.temp_data is None:
             print("DEBUG: No temporary data available")
             return
             
+        # 로딩 다이얼로그 표시
+        loading = LoadingDialog(self.main, "Applying corrected data...")
+        loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
+        loading.show()
+        QtWidgets.QApplication.processEvents()
+        
         try:
             # Update the global data
             DATA['tracked_peaks'] = self.temp_data['tracked_peaks']
-            DATA['contour_data'] = self.temp_data['contour_data']
             
-            print("DEBUG: Global data updated with temporary data")
+            # 중요: 보간 데이터도 함께 복사
+            if 'interpolated_data' in self.temp_data and self.temp_data['interpolated_data'] is not None:
+                # 보간 데이터 복사
+                contour_data = self.temp_data['contour_data']
+                contour_data['interpolated_data'] = self.temp_data['interpolated_data']
+                DATA['contour_data'] = contour_data
+                print("DEBUG: Global data updated with temporary data including interpolated data")
+            else:
+                # 보간 데이터 없으면 contour_data만 복사
+                DATA['contour_data'] = self.temp_data['contour_data']
+                print("DEBUG: Global data updated without interpolated data")
 
             # Trigger contour plot update in the main window
             self.main.parent().contour_plot_page.create_contour_plot()
@@ -427,3 +483,6 @@ class SDDFittingPage(QtCore.QObject):
                 "Error",
                 f"Failed to apply correction: {str(e)}"
             )
+        finally:
+            # 로딩 다이얼로그 닫기
+            loading.close()
