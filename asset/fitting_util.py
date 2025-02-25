@@ -538,7 +538,8 @@ def plot_contour_extraction(
     tracked_peaks,
     found_peak_list,
     flag_adjust_mode=False,
-    graph_option=None
+    graph_option=None,
+    on_peak_selected_callback=None  # 콜백 함수 추가
 ):
     """
     컨투어 플롯을 그리고, found_peak_list에 포함된 peak_name별로
@@ -609,7 +610,7 @@ def plot_contour_extraction(
     # 1) 그래프 옵션 기본값
     default_graph_option = {
         "figure_size": (12, 8),
-        "figure_dpi": 300,
+        "figure_dpi": 150,
         "contour_levels": 100,
         "contour_cmap": "inferno",
         "contour_lower_percentile": 0.1,
@@ -732,6 +733,10 @@ def plot_contour_extraction(
                 
                 # 디버그 출력
                 print(f"Selected peak: {pname}, frame index: {frame_index}")
+                
+                # 콜백 함수 호출 (존재하는 경우)
+                if on_peak_selected_callback:
+                    on_peak_selected_callback(pname, frame_index)
                 
                 fig.canvas.draw_idle()
                 break

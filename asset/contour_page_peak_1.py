@@ -491,11 +491,23 @@ class PeakTrackingPage(QtCore.QObject):
             peaks_to_show.append(self.current_peak_name)
             
         # Create contour plot
+        # 피크 선택 콜백 함수 정의
+        def on_peak_selected(peak_name, frame_index):
+            if self.manual_adjust:
+                self.current_peak_name = peak_name
+                self.current_index = frame_index
+                self.L_current_status_2.setText(
+                    f"Selected peak {peak_name} at frame {frame_index}. Click Next to adjust it."
+                )
+                self.update_ui_state()
+    
+        # Create contour plot with callback
         self.contour_canvas = plot_contour_extraction(
             contour_data=self.contour_data,
             tracked_peaks=self.main.PEAK_EXTRACT_DATA['tracked_peaks'],
-            found_peak_list=peaks_to_show,  # Show all relevant peaks
-            flag_adjust_mode=self.manual_adjust
+            found_peak_list=peaks_to_show,
+            flag_adjust_mode=self.manual_adjust,
+            on_peak_selected_callback=on_peak_selected  # 콜백 전달
         )
         
         if self.contour_canvas:
@@ -624,58 +636,53 @@ class PeakTrackingPage(QtCore.QObject):
             
             # Redraw contour with selection enabled
             self.update_contour_plot()
-            
-            # Setup selection handler
-            if self.contour_canvas and hasattr(self.contour_canvas, 'get_selected_peak_name'):
-                # Create a timer to check for peak selection
-                self.selection_timer = QtCore.QTimer()
-                self.selection_timer.timeout.connect(self.check_peak_selection)
-                self.selection_timer.start(500)  # Check every 500 ms
+
     
     def check_peak_selection(self):
         """Check if a peak is selected in the contour plot"""
-        if not self.manual_adjust or not self.contour_canvas:
-            if hasattr(self, 'selection_timer') and self.selection_timer.isActive():
-                self.selection_timer.stop()
-            return
+        # if not self.manual_adjust or not self.contour_canvas:
+        #     if hasattr(self, 'selection_timer') and self.selection_timer.isActive():
+        #         self.selection_timer.stop()
+        #     return
                 
-        # Get selected peak name and frame index from canvas
-        if hasattr(self.contour_canvas, 'get_selected_peak_name') and hasattr(self.contour_canvas, 'get_selected_frame_index'):
-            selected_peak = self.contour_canvas.get_selected_peak_name()
-            selected_frame = self.contour_canvas.get_selected_frame_index()
+        # # Get selected peak name and frame index from canvas
+        # if hasattr(self.contour_canvas, 'get_selected_peak_name') and hasattr(self.contour_canvas, 'get_selected_frame_index'):
+        #     selected_peak = self.contour_canvas.get_selected_peak_name()
+        #     selected_frame = self.contour_canvas.get_selected_frame_index()
                 
-            if selected_peak and selected_peak != self.current_peak_name:
-                self.current_peak_name = selected_peak
+        #     if selected_peak and selected_peak != self.current_peak_name:
+        #         self.current_peak_name = selected_peak
                 
-                # 선택된 프레임 인덱스가 있으면 직접 사용
-                if selected_frame is not None:
-                    self.current_index = selected_frame
-                    print(f"Selected peak: {self.current_peak_name} at frame {self.current_index}")
-                    self.L_current_status_2.setText(
-                        f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
-                    )
-                    self.update_ui_state()
-                    self.PB_next.setEnabled(True)
-                    return
+        #         # 선택된 프레임 인덱스가 있으면 직접 사용
+        #         if selected_frame is not None:
+        #             self.current_index = selected_frame
+        #             print(f"Selected peak: {self.current_peak_name} at frame {self.current_index}")
+        #             self.L_current_status_2.setText(
+        #                 f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
+        #             )
+        #             self.update_ui_state()
+        #             self.PB_next.setEnabled(True)
+        #             return
                     
-                # 아래는 기존 방식 (선택된 프레임을 찾지 못했을 경우 대비)
-                found_frame = False
-                for entry in self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']:
-                    if entry.get('peak_name') == selected_peak:
-                        self.current_index = entry.get('frame_index', 0)
-                        found_frame = True
-                        break
+        #         # 아래는 기존 방식 (선택된 프레임을 찾지 못했을 경우 대비)
+        #         found_frame = False
+        #         for entry in self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']:
+        #             if entry.get('peak_name') == selected_peak:
+        #                 self.current_index = entry.get('frame_index', 0)
+        #                 found_frame = True
+        #                 break
                 
-                if not found_frame:
-                    print(f"Warning: Could not find frame index for peak {selected_peak}")
-                    self.current_index = 0
+        #         if not found_frame:
+        #             print(f"Warning: Could not find frame index for peak {selected_peak}")
+        #             self.current_index = 0
                 
-                # Update UI
-                self.L_current_status_2.setText(
-                    f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
-                )
-                self.update_ui_state()
-                self.PB_next.setEnabled(True)  # Ensure Next button is enabled
+        #         # Update UI
+        #         self.L_current_status_2.setText(
+        #             f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
+        #         )
+        #         self.update_ui_state()
+        #         self.PB_next.setEnabled(True)  # Ensure Next button is enabled
+        pass
     
     def on_find_another_peak(self):
         """Start tracking a new peak"""
