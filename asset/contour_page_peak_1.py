@@ -268,52 +268,126 @@ class PeakTrackingPage(QtCore.QObject):
         
         # Remember last peak name and update states
         self.current_peak_name = peak_name
-        self.auto_tracking = True
         
-        # Update status
-        self.L_current_status_1.setText(
-            f"Tracking peak {peak_name}... ({self.current_index} / {self.max_index})"
-        )
-        
-        # If manually adjusting and successful, continue to next frame or auto-tracking
-        if self.manual_adjust:
-            # Move to next frame
-            next_index = self.current_index + 1
-            if next_index <= self.max_index:
-                self.current_index = next_index
-                print(f"Manual adjustment successful for frame {self.current_index-1}, continuing to frame {self.current_index}")
-                
-                # Return to automatic tracking mode after manual fix
+        # 수정: auto_tracking 중 에러 발생 후 manual_adjust=True인 경우 처리
+        if self.manual_adjust and self.auto_tracking:
+            # 자동 트래킹 중 수동 조정한 경우: 다음 프레임으로 이동하고 자동 트래킹 계속
+            print(f"Manual adjustment successful for frame {self.current_index}, continuing to frame {self.current_index + 1}")
+            
+            # 다음 프레임으로 이동
+            self.current_index += 1
+            
+            # manual_adjust 모드 해제하고 자동 트래킹 계속
+            if self.current_index <= self.max_index:
                 self.manual_adjust = False
                 print(f"Switching back to automatic tracking from frame {self.current_index}")
                 
-                # Try automatic tracking for remaining frames
-                self.run_automatic_tracking(output_range)  # Use the new output_range for better tracking
-            else:
-                # We've reached the end, complete the tracking
-                print(f"Manual adjustment completed the tracking")
-                self.auto_tracking = False
-                self.manual_adjust = False
-                
-                # Add to found peak list if not already there
-                if peak_name not in self.main.PEAK_EXTRACT_DATA['found_peak_list']:
-                    self.main.PEAK_EXTRACT_DATA['found_peak_list'].append(peak_name)
-                
-                self.L_current_status_2.setText(f"Tracking complete for {peak_name}!")
-                self.ui.stackedWidget.setCurrentIndex(2)
-                self.update_ui_state()
-                self.update_contour_plot()
-        # If this is the first frame, start automatic tracking
-        elif self.current_index == 0:
+                # 자동 트래킹 계속
+                self.run_automatic_tracking(output_range)
+                return
+        # 그 외 일반적인 경우는 기존 로직 유지
+        elif not self.manual_adjust:
+            self.auto_tracking = True
+        
+        # If this is the first frame of a new peak, start automatic tracking
+        if self.current_index == 0 and not self.manual_adjust:
             self.current_index += 1  # Move to next frame
             
             # Try automatic tracking for remaining frames
             self.run_automatic_tracking(output_range)  # Use output_range for better tracking
         else:
-            # If not first frame (unusual case), just update UI
+            # If not first frame or in manual_adjust mode, just update UI
             self.ui.stackedWidget.setCurrentIndex(2)  # Go to contour page
             self.update_ui_state()
             self.update_contour_plot()
+
+    def apply_q_range_modify(self):
+        """
+        Adjust 모드에서 사용: 선택된 프레임의 피크만 수정하고 컨투어 화면으로 돌아감
+        """
+        # Get selected q-range
+        q_range = self.q_correction_helper.get_q_range()
+        if q_range is None:
+            QtWidgets.QMessageBox.warning(
+                self.main, 
+                "Warning", 
+                "Please select a valid q range first."
+            )
+            return
+        
+        print(f"Modifying peak: q-range={q_range} at index={self.current_index}, peak={self.current_peak_name}")
+        
+        # Find peak at current index
+        result = find_peak_extraction(
+            contour_data=self.contour_data,
+            Index_number=self.current_index,
+            input_range=q_range,
+            fitting_function=PARAMS.get('fitting_model', 'gaussian'),
+            threshold_config=FITTING_THRESHOLD,
+            flag_auto_tracking=True,  # 여전히 true로 유지하여 fitting_util에서 인식하게 함
+            flag_manual_adjust=True,  # threshold check bypass
+            flag_start=False,  # 새 피크가 아님
+            start_index=None,
+            current_peak_name=self.current_peak_name
+        )
+        
+        # Handle result based on success/failure
+        if isinstance(result, str):
+            # Failed to find peak
+            self.L_current_status_2.setText(f"Failed to adjust peak: {result}")
+            self.ui.stackedWidget.setCurrentIndex(2)  # Go to contour page
+            self.update_ui_state()
+            self.update_contour_plot()
+            return
+        
+        # Unpack successful result
+        peak_q, peak_intensity, output_range, fwhm, peak_name = result
+        
+        print(f"Adjusted peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
+        
+        # Check if we already have data for this frame and peak name
+        # If so, replace it instead of adding a new entry
+        found_existing = False
+        for i, entry in enumerate(self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']):
+            if entry.get('frame_index') == self.current_index and entry.get('peak_name') == peak_name:
+                # Replace existing entry
+                print(f"Replacing existing entry for frame {self.current_index}, peak {peak_name}")
+                self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i] = {
+                    "frame_index": self.current_index,
+                    "Time": self.contour_data['Data'][self.current_index].get("Time", 0),
+                    "Temperature": self.contour_data['Data'][self.current_index].get("Temperature", 0),
+                    "peak_q": peak_q,
+                    "peak_Intensity": peak_intensity,
+                    "fwhm": fwhm,
+                    "peak_name": peak_name,
+                    "output_range": output_range
+                }
+                found_existing = True
+                break
+        
+        if not found_existing:
+            # Save new result to tracked_peaks
+            current_entry = self.contour_data['Data'][self.current_index]
+            new_result = {
+                "frame_index": self.current_index,
+                "Time": current_entry.get("Time", 0),
+                "Temperature": current_entry.get("Temperature", 0),
+                "peak_q": peak_q,
+                "peak_Intensity": peak_intensity,
+                "fwhm": fwhm,
+                "peak_name": peak_name,
+                "output_range": output_range
+            }
+            self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)
+        
+        # 이 부분 삭제: self.auto_tracking = False
+        # auto_tracking 플래그를 건드리지 않고 기존 상태 유지
+        
+        # 컨투어 페이지로 돌아갑니다
+        self.L_current_status_2.setText(f"Peak {peak_name} at frame {self.current_index} successfully adjusted")
+        self.ui.stackedWidget.setCurrentIndex(2)  # 컨투어 페이지로 이동
+        self.update_contour_plot()
+        self.update_ui_state()
     
     def run_automatic_tracking(self, initial_q_range):
         """
@@ -444,7 +518,7 @@ class PeakTrackingPage(QtCore.QObject):
         print(f"Next button clicked - current state: auto_tracking={self.auto_tracking}, manual_adjust={self.manual_adjust}")
         
         if self.manual_adjust and self.current_peak_name:
-            # In adjustment mode, edit selected peak
+            # In adjustment mode, edit selected peak at the current_index (which was set from the selection)
             self.ui.stackedWidget.setCurrentIndex(1)  # Go to q-range page
             self.setup_q_range_graph()  # Setup graph for current frame
             
@@ -452,6 +526,16 @@ class PeakTrackingPage(QtCore.QObject):
             self.L_current_status_1.setText(
                 f"Adjusting peak {self.current_peak_name} at frame {self.current_index}"
             )
+            
+            # apply_q_range 버튼 연결 해제하고 apply_q_range_modify로 연결
+            try:
+                self.PB_apply_qrange.clicked.disconnect()
+            except TypeError:
+                # 이미 연결이 해제되었거나 연결된 적이 없는 경우
+                pass
+            
+            self.PB_apply_qrange.clicked.connect(self.apply_q_range_modify)
+            
         elif self.auto_tracking:
             # Set manual_adjust to True so threshold checks will be bypassed
             self.manual_adjust = True
@@ -465,6 +549,15 @@ class PeakTrackingPage(QtCore.QObject):
             self.L_current_status_1.setText(
                 f"Manual adjustment for frame {self.current_index} / {self.max_index}"
             )
+            
+            # apply_q_range 버튼 연결 해제하고 일반 on_apply_qrange로 연결
+            try:
+                self.PB_apply_qrange.clicked.disconnect()
+            except TypeError:
+                # 이미 연결이 해제되었거나 연결된 적이 없는 경우
+                pass
+                
+            self.PB_apply_qrange.clicked.connect(self.on_apply_qrange)
         
         self.update_ui_state()
     
@@ -530,31 +623,41 @@ class PeakTrackingPage(QtCore.QObject):
             if hasattr(self, 'selection_timer') and self.selection_timer.isActive():
                 self.selection_timer.stop()
             return
-            
-        # Get selected peak name from canvas
-        if hasattr(self.contour_canvas, 'get_selected_peak_name'):
-            selected = self.contour_canvas.get_selected_peak_name()
-            
-            if selected and selected != self.current_peak_name:
-                print(f"Peak selected: {selected}")
-                # New peak selected, update state
-                self.current_peak_name = selected
                 
-                # Find frame index for this peak
+        # Get selected peak name and frame index from canvas
+        if hasattr(self.contour_canvas, 'get_selected_peak_name') and hasattr(self.contour_canvas, 'get_selected_frame_index'):
+            selected_peak = self.contour_canvas.get_selected_peak_name()
+            selected_frame = self.contour_canvas.get_selected_frame_index()
+                
+            if selected_peak and selected_peak != self.current_peak_name:
+                self.current_peak_name = selected_peak
+                
+                # 선택된 프레임 인덱스가 있으면 직접 사용
+                if selected_frame is not None:
+                    self.current_index = selected_frame
+                    print(f"Selected peak: {self.current_peak_name} at frame {self.current_index}")
+                    self.L_current_status_2.setText(
+                        f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
+                    )
+                    self.update_ui_state()
+                    self.PB_next.setEnabled(True)
+                    return
+                    
+                # 아래는 기존 방식 (선택된 프레임을 찾지 못했을 경우 대비)
                 found_frame = False
                 for entry in self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']:
-                    if entry.get('peak_name') == selected:
+                    if entry.get('peak_name') == selected_peak:
                         self.current_index = entry.get('frame_index', 0)
                         found_frame = True
                         break
                 
                 if not found_frame:
-                    print(f"Warning: Could not find frame index for peak {selected}")
+                    print(f"Warning: Could not find frame index for peak {selected_peak}")
                     self.current_index = 0
                 
                 # Update UI
                 self.L_current_status_2.setText(
-                    f"Selected peak {selected} at frame {self.current_index}. Click Next to adjust it."
+                    f"Selected peak {selected_peak} at frame {self.current_index}. Click Next to adjust it."
                 )
                 self.update_ui_state()
                 self.PB_next.setEnabled(True)  # Ensure Next button is enabled

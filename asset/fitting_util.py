@@ -690,6 +690,7 @@ def plot_contour_extraction(
     color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
     scatter_dict = {}
     selected_peak_name = [None]
+    selected_frame_index = [None]  # 선택된 프레임 인덱스 저장 변수 추가
     highlight_lines = [None, None]
 
     for i, (pname, data_dict) in enumerate(data_by_peak.items()):
@@ -717,12 +718,21 @@ def plot_contour_extraction(
         artist = event.artist
         for pname, sc_ in scatter_dict.items():
             if artist == sc_:
-                idx = event.ind[0]
+                idx = event.ind[0]  # 선택된 데이터 포인트 인덱스
+                frame_index = data_by_peak[pname]["indices"][idx]  # 해당 데이터 포인트의 프레임 인덱스
                 q_val = data_by_peak[pname]["q"][idx]
                 t_val = data_by_peak[pname]["time"][idx]
+                
                 highlight_lines[0] = ax.axvline(q_val, color='yellow', linestyle='--', linewidth=2)
                 highlight_lines[1] = ax.axhline(t_val, color='yellow', linestyle='--', linewidth=2)
+                
+                # 선택된 피크 이름과 프레임 인덱스 저장
                 selected_peak_name[0] = pname
+                selected_frame_index[0] = frame_index
+                
+                # 디버그 출력
+                print(f"Selected peak: {pname}, frame index: {frame_index}")
+                
                 fig.canvas.draw_idle()
                 break
 
@@ -736,6 +746,11 @@ def plot_contour_extraction(
     def get_selected_peak_name():
         return selected_peak_name[0]
     canvas.get_selected_peak_name = get_selected_peak_name
+    
+    # 선택된 프레임 인덱스를 반환하는 메서드 추가
+    def get_selected_frame_index():
+        return selected_frame_index[0]
+    canvas.get_selected_frame_index = get_selected_frame_index
 
     canvas.draw()
     return canvas
