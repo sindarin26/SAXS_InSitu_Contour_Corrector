@@ -219,6 +219,9 @@ class QRangeIndexPage(QtCore.QObject):
         # 성공 시 결과 처리
         peak_q, peak_intensity, output_range, fwhm, peak_name = result
         
+        # 업데이트된 데이터를 저장할 변수
+        updated_entry = None
+        
         # 기존 데이터 업데이트
         for i, entry in enumerate(self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']):
             if entry.get('frame_index') == frame_index and entry.get('peak_name') == peak_name:
@@ -230,16 +233,8 @@ class QRangeIndexPage(QtCore.QObject):
                     'output_range': output_range
                 })
                 
-                # 현재 선택된 피크 데이터도 업데이트
-                for j, peak_entry in enumerate(self.selected_peak_data):
-                    if peak_entry.get('frame_index') == frame_index:
-                        self.selected_peak_data[j].update({
-                            'peak_q': peak_q,
-                            'peak_Intensity': peak_intensity,
-                            'fwhm': fwhm,
-                            'output_range': output_range
-                        })
-                        break
+                # 참조 저장 (나중에 사용)
+                updated_entry = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i]
                 
                 # 성공 메시지 표시
                 QtWidgets.QMessageBox.information(
@@ -248,14 +243,25 @@ class QRangeIndexPage(QtCore.QObject):
                     f"Peak updated: q = {peak_q:.4f}, intensity = {peak_intensity:.2f}"
                 )
                 
+                # selected_peak_data 완전히 새로고침 (참조 문제 방지)
+                self.selected_peak_data = []
+                for global_entry in self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']:
+                    if global_entry.get('peak_name') == peak_name:
+                        # 딕셔너리 복사하여 추가 (새로운 참조 생성)
+                        self.selected_peak_data.append(dict(global_entry))
+                
+                # 프레임 인덱스로 정렬
+                self.selected_peak_data.sort(key=lambda x: x.get('frame_index', 0))
+                
                 # 업데이트된 데이터로 콤보박스 새로고침
                 current_index = self.CB_index.currentIndex()
                 self.setup_index_combobox()
                 self.CB_index.setCurrentIndex(current_index)  # 현재 선택 유지
                 
                 # q-range 그래프 업데이트
-                updated_entry = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i]
-                self.setup_qrange_graph(updated_entry)
+                # 업데이트된 데이터를 기반으로 그래프 새로 그리기
+                if updated_entry:
+                    self.setup_qrange_graph(dict(updated_entry))  # 딕셔너리 복사하여 전달
                 
                 return
         
