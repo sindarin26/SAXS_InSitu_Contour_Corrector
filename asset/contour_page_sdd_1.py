@@ -106,8 +106,11 @@ class SDDPeakTrackingPage(QtCore.QObject):
                         peak_q = entry.get("peak_q")
                         peak_index = entry.get("frame_index")
                         
-                        # 피크 위치 주변으로 좁은 범위 설정 (피크 위치에 집중)
-                        if peak_q is not None:
+                        # 피크의 실제 분석 범위 사용 (가능한 경우)
+                        if "output_range" in entry and entry["output_range"] is not None:
+                            custom_q_range = entry["output_range"]
+                        # 없는 경우 피크 주변으로 범위 설정
+                        elif peak_q is not None:
                             q_width = 0.1  # 적절한 범위 조정
                             custom_q_range = (peak_q - q_width, peak_q + q_width)
                         break
