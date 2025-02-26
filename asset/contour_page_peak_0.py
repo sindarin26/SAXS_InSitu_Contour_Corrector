@@ -120,28 +120,79 @@ class PeakSettingsPage(QtCore.QObject):
 
             # Connect checkbox state change
             checkbox.stateChanged.connect(
-                lambda state, le=lineedit, lb=label, vk=value_key:
-                self.update_threshold_state(
-                    bool(state),
-                    le,
-                    lb,
-                    FITTING_THRESHOLD[vk]
-                )
+                lambda state, le=lineedit, lb=label, pk=param_key, vk=value_key:
+                self.on_checkbox_state_changed(state, le, lb, pk, vk)
             )
 
             # Connect lineedit changes
             lineedit.editingFinished.connect(
-                lambda le=lineedit, vk=value_key, lb=label:
-                self.update_threshold_value(le, vk, lb)
+                lambda le=lineedit, vk=value_key, lb=label, pk=param_key:
+                self.on_value_changed(le, vk, lb, pk)
             )
 
+
+    def on_checkbox_state_changed(self, state, lineedit, label, param_key, value_key):
+        """Checkbox 상태가 변경되었을 때 호출되는 함수"""
+        enabled = bool(state)
+        
+        # UI 상태 업데이트
+        lineedit.setEnabled(enabled)
+        
+        # FITTING_THRESHOLD 업데이트 
+        FITTING_THRESHOLD[param_key] = enabled
+        
+        # 라벨 업데이트
+        if enabled:
+            label.setText(f"{FITTING_THRESHOLD[value_key]:.3f}")
+        else:
+            label.setText("Disabled")
+        
+        print(f"DEBUG: Threshold {param_key} enabled={enabled}, value={FITTING_THRESHOLD[value_key]}")
+        print(f"DEBUG: Current FITTING_THRESHOLD: {FITTING_THRESHOLD}")
+
+    def on_value_changed(self, lineedit, value_key, label, param_key):
+        """라인에디트 값이 변경되었을 때 호출되는 함수"""
+        try:
+            new_value = float(lineedit.text())
+            if new_value < 0:
+                raise ValueError("Value must be positive")
+            
+            # 값 업데이트
+            FITTING_THRESHOLD[value_key] = new_value
+            
+            # 라벨 업데이트
+            if FITTING_THRESHOLD[param_key]:  # 체크박스가 활성화된 경우에만
+                label.setText(f"{new_value:.3f}")
+            
+            print(f"DEBUG: Threshold {value_key} updated to {new_value}")
+            print(f"DEBUG: Current FITTING_THRESHOLD: {FITTING_THRESHOLD}")
+        except ValueError as e:
+            # 오류 발생 시 원래 값으로 복원
+            lineedit.setText(str(FITTING_THRESHOLD[value_key]))
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Invalid Input",
+                f"Please enter a valid positive number: {str(e)}"
+            )
+
+
     def update_threshold_state(self, enabled, lineedit, label, current_value):
-        """Update UI state for threshold controls"""
+        """Update UI state for threshold controls and update FITTING_THRESHOLD"""
         lineedit.setEnabled(enabled)
         if enabled:
             label.setText(f"{current_value:.3f}")
         else:
             label.setText("Disabled")
+            
+        # 여기서 각 threshold_mappings의 항목을 확인해서
+        # 현재 호출된 위젯과 연결된 param_key를 찾아 업데이트
+        for mapping in self.threshold_mappings.values():
+            if mapping['checkbox'] == lineedit or mapping['label'] == label:
+                param_key = mapping['param_key']
+                FITTING_THRESHOLD[param_key] = enabled
+                break
+
+
 
     def update_threshold_value(self, lineedit, value_key, label):
         """Update threshold value in FITTING_THRESHOLD"""
@@ -184,6 +235,15 @@ class PeakSettingsPage(QtCore.QObject):
             )
             return
             
+        # 현재 FITTING_THRESHOLD 값 출력
+        print("\n=== DEBUG: Moving from page 0 to page 1 ===")
+        print(f"DEBUG: Current PARAMS['fitting_model']: {PARAMS['fitting_model']}")
+        print(f"DEBUG: Current FITTING_THRESHOLD: {FITTING_THRESHOLD}")
+        print("=== Threshold details ===")
+        for key, value in FITTING_THRESHOLD.items():
+            print(f"DEBUG:   {key}: {value}")
+        print("============================\n")
+        
         # Initialize peak data with contour data
         self.main.init_peak_data(DATA['contour_data'])
         

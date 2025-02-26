@@ -264,7 +264,6 @@ class PeakTrackingPage(QtCore.QObject):
             self.ui.stackedWidget.setCurrentIndex(0)
     
     def on_apply_qrange(self):
-        """Apply selected q-range and start peak tracking"""
         # Get selected q-range
         q_range = self.q_correction_helper.get_q_range()
         if q_range is None:
@@ -306,9 +305,12 @@ class PeakTrackingPage(QtCore.QObject):
             return
         
         # Unpack successful result
-        peak_q, peak_intensity, output_range, fwhm, peak_name = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
         
         print(f"Found peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
+        
+        # Get current entry before using it
+        current_entry = self.contour_data['Data'][self.current_index]
         
         # Check if we already have data for this frame and peak name
         # If so, replace it instead of adding a new entry
@@ -319,20 +321,21 @@ class PeakTrackingPage(QtCore.QObject):
                 print(f"Replacing existing entry for frame {self.current_index}, peak {peak_name}")
                 self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i] = {
                     "frame_index": self.current_index,
-                    "Time": self.contour_data['Data'][self.current_index].get("Time", 0),
-                    "Temperature": self.contour_data['Data'][self.current_index].get("Temperature", 0),
+                    "Time": current_entry.get("Time", 0),
+                    "Temperature": current_entry.get("Temperature", 0),
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
                     "fwhm": fwhm,
                     "peak_name": peak_name,
-                    "output_range": output_range
+                    "output_range": output_range,
+                    "fitting_function": fitting_function,
+                    "fitting_params": fitting_params
                 }
                 found_existing = True
                 break
         
         if not found_existing:
             # Save new result to tracked_peaks
-            current_entry = self.contour_data['Data'][self.current_index]
             new_result = {
                 "frame_index": self.current_index,
                 "Time": current_entry.get("Time", 0),
@@ -341,10 +344,12 @@ class PeakTrackingPage(QtCore.QObject):
                 "peak_Intensity": peak_intensity,
                 "fwhm": fwhm,
                 "peak_name": peak_name,
-                "output_range": output_range
+                "output_range": output_range,
+                "fitting_function": fitting_function,
+                "fitting_params": fitting_params
             }
-            self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)
-        
+            self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)     
+
         # Remember last peak name and update states
         self.current_peak_name = peak_name
         
@@ -403,9 +408,9 @@ class PeakTrackingPage(QtCore.QObject):
             input_range=q_range,
             fitting_function=PARAMS.get('fitting_model', 'gaussian'),
             threshold_config=FITTING_THRESHOLD,
-            flag_auto_tracking=True,  # 여전히 true로 유지하여 fitting_util에서 인식하게 함
-            flag_manual_adjust=True,  # threshold check bypass
-            flag_start=False,  # 새 피크가 아님
+            flag_auto_tracking=True,
+            flag_manual_adjust=True,
+            flag_start=False,
             start_index=None,
             current_peak_name=self.current_peak_name
         )
@@ -420,7 +425,7 @@ class PeakTrackingPage(QtCore.QObject):
             return
         
         # Unpack successful result
-        peak_q, peak_intensity, output_range, fwhm, peak_name = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
         
         print(f"Adjusted peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
         
@@ -439,7 +444,9 @@ class PeakTrackingPage(QtCore.QObject):
                     "peak_Intensity": peak_intensity,
                     "fwhm": fwhm,
                     "peak_name": peak_name,
-                    "output_range": output_range
+                    "output_range": output_range,
+                    "fitting_function": fitting_function,
+                    "fitting_params": fitting_params
                 }
                 found_existing = True
                 break
@@ -455,9 +462,12 @@ class PeakTrackingPage(QtCore.QObject):
                 "peak_Intensity": peak_intensity,
                 "fwhm": fwhm,
                 "peak_name": peak_name,
-                "output_range": output_range
+                "output_range": output_range,
+                "fitting_function": fitting_function,
+                "fitting_params": fitting_params
             }
             self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)
+
         
         # 수정 성공 메시지 표시
         success_msg = f"Peak {peak_name} at frame {self.current_index} successfully adjusted"
@@ -526,7 +536,9 @@ class PeakTrackingPage(QtCore.QObject):
             "peak_q": self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][-1]['peak_q'],
             "peak_intensity": self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][-1]['peak_Intensity'],
             "fwhm": self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][-1]['fwhm'],
-            "peak_name": self.current_peak_name
+            "peak_name": self.current_peak_name,
+            "fitting_function": self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][-1]['fitting_function'],
+            "fitting_params": self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][-1]['fitting_params']
         }
         
         # Run tracking
