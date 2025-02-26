@@ -263,7 +263,7 @@ class DataExportPage(QtCore.QObject):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Create filename
-        filename = f"{series_name}_{timestamp}.xlsx"
+        filename = f"{series_name}_extracted_peaks_{timestamp}.xlsx"
         
         # Get output directory
         output_dir = self.get_output_directory()

@@ -522,10 +522,17 @@ def run_automatic_tracking(
         peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
 
         current_entry = contour_data["Data"][current_index]
+
+        current_time = tracked_peaks['Time-temp'][0][current_index]
+        current_temp = tracked_peaks['Time-temp'][1][current_index]
+
+        print(f"DEBUG: Current time and temp = {current_time}, {current_temp}")
+
+
         new_result = {
             "frame_index": current_index,
-            "Time": current_entry.get("Time", 0),
-            "Temperature": current_entry.get("Temperature", 0),
+            "Time": current_time,
+            "Temperature": current_temp,
             "peak_q": peak_q,
             "peak_Intensity": peak_intensity,
             "fwhm": fwhm,

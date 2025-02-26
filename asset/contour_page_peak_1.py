@@ -311,6 +311,11 @@ class PeakTrackingPage(QtCore.QObject):
         
         # Get current entry before using it
         current_entry = self.contour_data['Data'][self.current_index]
+
+        current_time = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][0][self.current_index]
+        current_temp = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][1][self.current_index]
+
+        print(f"DEBUG: Current time and temp = {current_time}, {current_temp}")
         
         # Check if we already have data for this frame and peak name
         # If so, replace it instead of adding a new entry
@@ -321,8 +326,8 @@ class PeakTrackingPage(QtCore.QObject):
                 print(f"Replacing existing entry for frame {self.current_index}, peak {peak_name}")
                 self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i] = {
                     "frame_index": self.current_index,
-                    "Time": current_entry.get("Time", 0),
-                    "Temperature": current_entry.get("Temperature", 0),
+                    "Time": current_time,
+                    "Temperature": current_temp,
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
                     "fwhm": fwhm,
@@ -338,8 +343,8 @@ class PeakTrackingPage(QtCore.QObject):
             # Save new result to tracked_peaks
             new_result = {
                 "frame_index": self.current_index,
-                "Time": current_entry.get("Time", 0),
-                "Temperature": current_entry.get("Temperature", 0),
+                "Time": current_time,
+                "Temperature": current_temp,
                 "peak_q": peak_q,
                 "peak_Intensity": peak_intensity,
                 "fwhm": fwhm,
@@ -428,6 +433,11 @@ class PeakTrackingPage(QtCore.QObject):
         peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
         
         print(f"Adjusted peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
+
+        current_time = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][0][self.current_index]
+        current_temp = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][1][self.current_index]
+
+        print(f"DEBUG: Current time and temp = {current_time}, {current_temp}")
         
         # Check if we already have data for this frame and peak name
         # If so, replace it instead of adding a new entry
@@ -438,8 +448,8 @@ class PeakTrackingPage(QtCore.QObject):
                 print(f"Replacing existing entry for frame {self.current_index}, peak {peak_name}")
                 self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i] = {
                     "frame_index": self.current_index,
-                    "Time": self.contour_data['Data'][self.current_index].get("Time", 0),
-                    "Temperature": self.contour_data['Data'][self.current_index].get("Temperature", 0),
+                    "Time": current_time,
+                    "Temperature": current_temp,
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
                     "fwhm": fwhm,
@@ -456,8 +466,8 @@ class PeakTrackingPage(QtCore.QObject):
             current_entry = self.contour_data['Data'][self.current_index]
             new_result = {
                 "frame_index": self.current_index,
-                "Time": current_entry.get("Time", 0),
-                "Temperature": current_entry.get("Temperature", 0),
+                "Time": current_time,
+                "Temperature": current_temp,
                 "peak_q": peak_q,
                 "peak_Intensity": peak_intensity,
                 "fwhm": fwhm,
