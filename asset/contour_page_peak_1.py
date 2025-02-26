@@ -348,8 +348,8 @@ class PeakTrackingPage(QtCore.QObject):
                 "fitting_function": fitting_function,
                 "fitting_params": fitting_params
             }
-            self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)     
-
+            self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'].append(new_result)
+            
         # Remember last peak name and update states
         self.current_peak_name = peak_name
         

@@ -785,9 +785,9 @@
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout">
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="PB_go_to_export_page">
                <property name="text">
-                <string>Check extracted Peak</string>
+                <string>Export Extracted Peaks</string>
                </property>
               </widget>
              </item>
@@ -877,7 +877,27 @@
            </widget>
           </item>
           <item>
-           <widget class="QTableView" name="TV_peak_list"/>
+           <widget class="QTabWidget" name="TW_table">
+            <property name="tabPosition">
+             <enum>QTabWidget::North</enum>
+            </property>
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="elideMode">
+             <enum>Qt::ElideRight</enum>
+            </property>
+            <widget class="QWidget" name="tab">
+             <attribute name="title">
+              <string>Tab 1</string>
+             </attribute>
+            </widget>
+            <widget class="QWidget" name="tab_2">
+             <attribute name="title">
+              <string>Tab 2</string>
+             </attribute>
+            </widget>
+           </widget>
           </item>
          </layout>
         </widget>
