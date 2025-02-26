@@ -317,6 +317,13 @@ def find_peak_extraction(
         from asset.contour_storage import FITTING_THRESHOLD
         threshold_config = FITTING_THRESHOLD
 
+    # 디버깅 출력 추가
+    print(f"\nDEBUG: find_peak_extraction called for index {Index_number}")
+    print(f"DEBUG: flag_auto_tracking={flag_auto_tracking}, flag_manual_adjust={flag_manual_adjust}")
+    print(f"DEBUG: threshold_config: {threshold_config}")
+    print(f"DEBUG: Fitting function: {fitting_function}")
+
+
     # 2) input_range 검증
     if input_range is None:
         return "No input range provided"
@@ -375,10 +382,31 @@ def find_peak_extraction(
     # 7) 피크 위치 및 강도 계산
     if fitting_function.lower() == "lorentzian":
         peak_q = popt[1]  # x0
+        fitting_params = {
+                    "a": popt[0],
+                    "x0": popt[1],
+                    "gamma": popt[2],
+                    "offset": popt[3]
+                }
     elif fitting_function.lower() == "voigt":
         peak_q = popt[1]  # mu
+        fitting_params = {
+            "a": popt[0],
+            "mu": popt[1],
+            "sigma": popt[2],
+            "gamma": popt[3],
+            "offset": popt[4]
+        }
+
     else:  # gaussian
         peak_q = popt[1]
+        fitting_params = {
+            "a": popt[0],
+            "mu": popt[1],
+            "sigma": popt[2],
+            "offset": popt[3]
+        }
+
 
     peak_intensity = fit_func(peak_q, *popt)
 
@@ -423,7 +451,7 @@ def find_peak_extraction(
     shift = peak_q - center
     output_range = (q_min + shift, q_max + shift)
 
-    return peak_q, peak_intensity, output_range, fwhm, peak_name
+    return peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params
 
 
 def run_automatic_tracking(
@@ -491,7 +519,7 @@ def run_automatic_tracking(
                 on_error_callback(f"Peak not found at frame {current_index}: {result}")
             break
 
-        peak_q, peak_intensity, output_range, fwhm, peak_name = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
 
         current_entry = contour_data["Data"][current_index]
         new_result = {
@@ -502,7 +530,9 @@ def run_automatic_tracking(
             "peak_Intensity": peak_intensity,
             "fwhm": fwhm,
             "peak_name": peak_name,
-            "output_range": output_range
+            "output_range": output_range,
+            "fitting_function": fitting_function,
+            "fitting_params": fitting_params
         }
         tracked_peaks["Data"].append(new_result)
 
@@ -510,7 +540,10 @@ def run_automatic_tracking(
             "peak_q": peak_q,
             "peak_intensity": peak_intensity,
             "fwhm": fwhm,
-            "peak_name": peak_name
+            "peak_name": peak_name,
+            "output_range": output_range,
+            "fitting_function": fitting_function,
+            "fitting_params": fitting_params
         }
 
         if on_update_callback:
