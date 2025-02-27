@@ -144,7 +144,18 @@ class QRangeIndexPage(QtCore.QObject):
         # 현재 프레임 데이터 가져오기
         frame_index = peak_entry.get('frame_index', 0)
         peak_q = peak_entry.get('peak_q')
+        
+        # 중요: 여기서 정확한 output_range를 사용
         output_range = peak_entry.get('output_range')
+        
+        # 피팅에 사용된 범위가 없으면 peak_q 주변으로 고정 너비 범위 생성
+        if output_range is None:
+            q_width = 0.1  # 임의의 적절한 범위
+            output_range = (peak_q - q_width, peak_q + q_width)
+            print(f"Warning: No output_range found for frame {frame_index}, using default width around peak")
+        else:
+            # 디버그 출력: 실제 사용된 범위 확인
+            print(f"DEBUG: Frame {frame_index}, peak_q={peak_q:.4f}, range=({output_range[0]:.4f}, {output_range[1]:.4f})")
         
         try:
             # 현재 프레임의 q, Intensity 데이터
@@ -160,7 +171,7 @@ class QRangeIndexPage(QtCore.QObject):
                 peak=peak_q,
                 index=frame_index,
                 current_index=frame_index,
-                q_range=output_range
+                q_range=output_range  # 정확한 범위 사용
             )
             
             self.q_correction_helper.add_selection_lines()
@@ -242,7 +253,8 @@ class QRangeIndexPage(QtCore.QObject):
                 QtWidgets.QMessageBox.information(
                     self.main,
                     "Success",
-                    f"Peak updated: q = {peak_q:.4f}, intensity = {peak_intensity:.2f}"
+                    f"Peak updated: q = {peak_q:.4f}, intensity = {peak_intensity:.2f}\n"
+                    f"New q-range: ({output_range[0]:.4f}, {output_range[1]:.4f})"
                 )
                 
                 # selected_peak_data 완전히 새로고침 (참조 문제 방지)
