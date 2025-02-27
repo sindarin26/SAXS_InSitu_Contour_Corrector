@@ -140,7 +140,7 @@ class DataExportPage(QtCore.QObject):
                 model_equation = "f(x) = a * gamma^2 / ((x-x0)^2 + gamma^2) + offset"
                 model_params = ["a", "x0", "gamma", "offset"]
             elif fitting_function == "voigt":
-                model_equation = "f(x) = a * voigt_profile(x-mu, sigma, gamma) + offset"
+                model_equation = "f(x) = a * Re[w(z)] / (sigma * sqrt(2*pi)) + offset, z = (x - mu + i*gamma) / (sigma * sqrt(2))"
                 model_params = ["a", "mu", "sigma", "gamma", "offset"]
             else:
                 model_equation = f"Unknown model: {fitting_function}"
