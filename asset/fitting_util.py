@@ -110,6 +110,12 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         gamma_guess = (input_range[1] - input_range[0]) / 4.0
         offset_guess = np.min(intensity_subset)
         p0 = [a_guess, x0_guess, gamma_guess, offset_guess]
+        
+        # 감마에 대한 하한(lower bound)를 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
+        
     elif fitting_function.lower() == "voigt":
         fit_func = voigt
         # Initial guesses for Voigt
@@ -119,6 +125,12 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         gamma_guess = sigma_guess  # Start with equal Gaussian and Lorentzian contributions
         offset_guess = np.min(intensity_subset)
         p0 = [a_guess, mu_guess, sigma_guess, gamma_guess, offset_guess]
+        
+        # 시그마와 감마에 대한 하한을 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
+        
     else:  # default to Gaussian
         fit_func = gaussian
         # Initial guesses for Gaussian
@@ -127,9 +139,15 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         sigma_guess = (input_range[1] - input_range[0]) / 4.0
         offset_guess = np.min(intensity_subset)
         p0 = [a_guess, mu_guess, sigma_guess, offset_guess]
+        
+        # 시그마에 대한 하한을 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
     
     try:
-        popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0)
+        # bounds 파라미터 추가
+        popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0, bounds=bounds)
     except Exception as e:
         return f"Fitting failed with {fitting_function}: {str(e)}"
     
@@ -354,6 +372,11 @@ def find_peak_extraction(
         gamma_guess = (q_max - q_min) / 4.0
         offset_guess = float(np.min(intensity_subset))
         p0 = [a_guess, x0_guess, gamma_guess, offset_guess]
+        
+        # 감마에 대한 하한(lower bound)를 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
 
     elif fitting_function.lower() == "voigt":
         fit_func = voigt
@@ -363,6 +386,11 @@ def find_peak_extraction(
         gamma_guess = sigma_guess
         offset_guess = float(np.min(intensity_subset))
         p0 = [a_guess, mu_guess, sigma_guess, gamma_guess, offset_guess]
+        
+        # 시그마와 감마에 대한 하한을 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
 
     else:  # default: Gaussian
         from asset.fitting_util import gaussian
@@ -372,12 +400,20 @@ def find_peak_extraction(
         sigma_guess = (q_max - q_min) / 4.0
         offset_guess = float(np.min(intensity_subset))
         p0 = [a_guess, mu_guess, sigma_guess, offset_guess]
+        
+        # 시그마에 대한 하한을 0으로 설정
+        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
+        upper_bounds = [np.inf, np.inf, np.inf, np.inf]
+        bounds = (lower_bounds, upper_bounds)
+
 
     # 6) 피팅 시도
     try:
-        popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0)
+        # bounds 파라미터 추가
+        popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0, bounds=bounds)
     except Exception as e:
         return f"Fitting failed with {fitting_function}: {str(e)}"
+
 
     # 7) 피크 위치 및 강도 계산
     if fitting_function.lower() == "lorentzian":
