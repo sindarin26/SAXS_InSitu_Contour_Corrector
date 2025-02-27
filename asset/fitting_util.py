@@ -112,7 +112,7 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         p0 = [a_guess, x0_guess, gamma_guess, offset_guess]
         
         # 감마에 대한 하한(lower bound)를 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
         
@@ -127,7 +127,7 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         p0 = [a_guess, mu_guess, sigma_guess, gamma_guess, offset_guess]
         
         # 시그마와 감마에 대한 하한을 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
         
@@ -141,7 +141,7 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         p0 = [a_guess, mu_guess, sigma_guess, offset_guess]
         
         # 시그마에 대한 하한을 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
     
@@ -374,7 +374,7 @@ def find_peak_extraction(
         p0 = [a_guess, x0_guess, gamma_guess, offset_guess]
         
         # 감마에 대한 하한(lower bound)를 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, -np.inf]  # a, x0, gamma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
 
@@ -388,7 +388,7 @@ def find_peak_extraction(
         p0 = [a_guess, mu_guess, sigma_guess, gamma_guess, offset_guess]
         
         # 시그마와 감마에 대한 하한을 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, 0.0, -np.inf]  # a, mu, sigma, gamma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
 
@@ -402,7 +402,7 @@ def find_peak_extraction(
         p0 = [a_guess, mu_guess, sigma_guess, offset_guess]
         
         # 시그마에 대한 하한을 0으로 설정
-        lower_bounds = [-np.inf, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
+        lower_bounds = [0.0, -np.inf, 0.0, -np.inf]  # a, mu, sigma, offset
         upper_bounds = [np.inf, np.inf, np.inf, np.inf]
         bounds = (lower_bounds, upper_bounds)
 
