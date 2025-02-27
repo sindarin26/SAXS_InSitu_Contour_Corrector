@@ -482,10 +482,19 @@ def find_peak_extraction(
         if error_msg:
             return error_msg
 
-    # 11) output_range 계산
-    center = 0.5 * (q_min + q_max)
-    shift = peak_q - center
-    output_range = (q_min + shift, q_max + shift)
+    # 11) output_range 계산 - 여기가 핵심!
+    if flag_auto_tracking:
+        # 자동 추적 모드: 피크 위치 기준으로 범위 재조정 (기존 방식)
+        center = 0.5 * (q_min + q_max)
+        shift = peak_q - center
+        output_range = (q_min + shift, q_max + shift)
+        print(f"DEBUG: Auto-tracking mode - shifting range to center on peak")
+        print(f"DEBUG: Original range: {input_range}, shifted range: {output_range}")
+    else:
+        # 수동 모드: 입력 범위를 그대로 사용 (사용자 선택 범위 유지)
+        output_range = input_range
+        print(f"DEBUG: Manual mode - using input range as-is: {output_range}")
+
 
     return peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params
 
