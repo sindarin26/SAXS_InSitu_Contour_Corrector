@@ -217,7 +217,7 @@ class QRangeIndexPage(QtCore.QObject):
             return
             
         # 성공 시 결과 처리
-        peak_q, peak_intensity, output_range, fwhm, peak_name = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
         
         # 업데이트된 데이터를 저장할 변수
         updated_entry = None
@@ -230,7 +230,9 @@ class QRangeIndexPage(QtCore.QObject):
                     'peak_q': peak_q,
                     'peak_Intensity': peak_intensity,
                     'fwhm': fwhm,
-                    'output_range': output_range
+                    'output_range': output_range,
+                    'fitting_function': fitting_function,
+                    'fitting_params': fitting_params
                 })
                 
                 # 참조 저장 (나중에 사용)
