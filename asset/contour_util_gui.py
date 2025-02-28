@@ -106,6 +106,9 @@ class TempCorrectionHelper:
             line1.setPen(pg.mkPen(color='b', width=1.5))  # 파란색 실선
             line2.setPen(pg.mkPen(color='b', width=1.5))
 
+            # 라인들을 서로 연결하여 교차 못하게 함
+            line1.other_line = line2
+            line2.other_line = line1
 
             # 라벨 생성 (초기 텍스트: "Start\n(인덱스, 온도°C)")
             label1 = pg.TextItem(color=(0, 0, 0))
@@ -122,8 +125,8 @@ class TempCorrectionHelper:
             line2.set_label(label2)
 
             # 실제 콜백(시그널) 연결 - 드래그 시 라벨 업데이트
-            line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Start", label_ypos))
-            line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "End", label_ypos))
+            line1.sigPositionChanged.connect(lambda: self.on_line_moved(line1, "Start", label_ypos, True))
+            line2.sigPositionChanged.connect(lambda: self.on_line_moved(line2, "End", label_ypos, False))
 
             # 초기 한 번 업데이트
             self.update_line_label(line1, "Start", label_ypos)
@@ -146,6 +149,10 @@ class TempCorrectionHelper:
             line1.setPen(pg.mkPen(color='r', width=1.5))
             line2.setPen(pg.mkPen(color='r', width=1.5))
 
+            # 라인들을 서로 연결하여 교차 못하게 함
+            line1.other_line = line2
+            line2.other_line = line1
+
             label1 = pg.TextItem(color=(0, 0, 0))
             label1.setFont(font)
             label2 = pg.TextItem(color=(0, 0, 0))
@@ -157,9 +164,9 @@ class TempCorrectionHelper:
             line1.set_label(label1)
             line2.set_label(label2)
 
-            # adjust 모드에서는 "Adjust Start", "Adjust End" 등으로 표시 가능
-            line1.sigPositionChanged.connect(lambda: self.update_line_label(line1, "Adjust Start", label_ypos))
-            line2.sigPositionChanged.connect(lambda: self.update_line_label(line2, "Adjust End", label_ypos))
+            # adjust 모드에서도 동일한 교차 방지 적용
+            line1.sigPositionChanged.connect(lambda: self.on_line_moved(line1, "Adjust Start", label_ypos, True))
+            line2.sigPositionChanged.connect(lambda: self.on_line_moved(line2, "Adjust End", label_ypos, False))
             
             self.update_line_label(line1, "Adjust Start", label_ypos)
             self.update_line_label(line2, "Adjust End", label_ypos)
@@ -173,6 +180,30 @@ class TempCorrectionHelper:
 
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
 
+    def on_line_moved(self, line, prefix, fixed_y, is_start_line):
+        """
+        라인 이동 시 호출되는 이벤트 핸들러
+        라벨 업데이트 및 다른 라인과의 위치 제한 처리
+        """
+        # 라벨 업데이트
+        self.update_line_label(line, prefix, fixed_y)
+        
+        # start와 end 라인이 교차하지 않도록 처리
+        current_pos = line.value()
+        other_line = line.other_line
+        if other_line:
+            other_pos = other_line.value()
+            
+            if is_start_line:  # start 라인인 경우
+                if current_pos > other_pos:
+                    # start가 end를 넘어가면 end도 같이 이동
+                    other_line.setValue(current_pos)
+                    self.update_line_label(other_line, "End" if self.selection_mode == "steady" else "Adjust End", fixed_y)
+            else:  # end 라인인 경우
+                if current_pos < other_pos:
+                    # end가 start보다 앞으로 가면 start도 같이 이동
+                    other_line.setValue(current_pos)
+                    self.update_line_label(other_line, "Start" if self.selection_mode == "steady" else "Adjust Start", fixed_y)
 
     def get_steady_range(self):
         """Return (start, end) index of the steady range."""
