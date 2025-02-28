@@ -1,9 +1,8 @@
-#asset/contour_page_peak.py
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from asset.contour_peak_ui import Ui_Peak_export_manager
 from asset.contour_page_peak_0 import PeakSettingsPage
 from asset.contour_page_peak_1 import PeakTrackingPage
-from asset.contour_page_peak_3 import DataExportPage  # Import the new page
+from asset.contour_page_peak_3 import DataExportPage
 from asset.contour_page_peak_4 import QRangeIndexPage
 from asset.contour_storage import DATA
 import copy
@@ -13,14 +12,25 @@ class PeakExportDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.ui = Ui_Peak_export_manager()
         self.ui.setupUi(self)
+        
+        self.setWindowFlags(
+            self.windowFlags() | 
+            QtCore.Qt.WindowMinMaxButtonsHint | 
+            QtCore.Qt.WindowCloseButtonHint & 
+            ~QtCore.Qt.WindowContextHelpButtonHint
+        )
 
         # Initialize data dictionary for this export session with new structure
         self.init_peak_data()
+
+        
+        # Add a flag to track if page 1 is being visited for the first time
+        self.page_1_initial_visit = True
         
         # Initialize pages
         self.settings_page = PeakSettingsPage(self)
         self.peak_tracking_page = PeakTrackingPage(self)
-        self.data_export_page = DataExportPage(self)  # Initialize the new page
+        self.data_export_page = DataExportPage(self)
         self.qrange_index_page = QRangeIndexPage(self)
 
         # Set initial state
@@ -65,6 +75,18 @@ class PeakExportDialog(QtWidgets.QDialog):
         
         # Connect the export page navigation button
         self.ui.PB_go_to_export_page.clicked.connect(self.go_to_export_page)
+        
+        # Connect to stackedWidget's currentChanged signal to track page transitions
+        self.ui.stackedWidget.currentChanged.connect(self.on_page_changed)
+
+    def on_page_changed(self, index):
+        """Track page transitions to manage the initial visit flag"""
+        if index == 1:  # If moving to page 1
+            # Reset the initial visit flag when returning to settings and then back to page 1
+            if self.ui.stackedWidget.currentIndex() == 0:
+                self.page_1_initial_visit = True
+            else:
+                self.page_1_initial_visit = False
 
     def go_to_export_page(self):
         """Navigate to the data export page and initialize it"""
