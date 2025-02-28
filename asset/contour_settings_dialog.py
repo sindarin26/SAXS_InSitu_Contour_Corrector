@@ -27,6 +27,10 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setSpacing(15)
         
+        # 이미지 크기 정보 섹션 추가 (스크롤 영역 외부에)
+        self.image_size_group = self.create_image_size_info_section()
+        main_layout.addWidget(self.image_size_group)
+        
         scroll_area = QtWidgets.QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         main_layout.addWidget(scroll_area)
@@ -43,15 +47,56 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         self.apply_button.clicked.connect(self.apply_all_changes)
         main_layout.addWidget(self.apply_button)
         
-        self.build_fields()
-        
         # 원본 옵션의 깊은 복사 생성
         import copy
         self.temp_options = copy.deepcopy(PLOT_OPTIONS['graph_option'])
         
+        self.build_fields()
+        
+        # 이미지 크기 정보 초기 업데이트
+        self.update_image_size_info()
+        
         # 창 크기 설정
         self.resize(800, 1200)
 
+    def create_image_size_info_section(self):
+        """이미지 크기 정보를 표시하는 섹션 생성"""
+        group_box = QtWidgets.QGroupBox("Export Image Size")
+        grid_layout = QtWidgets.QGridLayout(group_box)
+        grid_layout.setSpacing(10)
+        
+        # 그룹박스 제목 폰트 설정
+        title_font = QtGui.QFont("Segoe UI", 12)
+        title_font.setBold(True)
+        group_box.setFont(title_font)
+        
+        # 인치 단위 레이블
+        self.size_inches_label = QtWidgets.QLabel("Size (inches): --")
+        self.size_inches_label.setFont(QtGui.QFont("Segoe UI", 12))
+        grid_layout.addWidget(self.size_inches_label, 0, 0)
+        
+        # 픽셀 단위 레이블
+        self.size_pixels_label = QtWidgets.QLabel("Size (pixels): --")
+        self.size_pixels_label.setFont(QtGui.QFont("Segoe UI", 12))
+        grid_layout.addWidget(self.size_pixels_label, 0, 1)
+        
+        return group_box
+        
+    def update_image_size_info(self):
+        """현재 설정값에 따른 이미지 크기 정보 업데이트"""
+        # 현재 figure_size와 dpi 값 가져오기
+        fig_size = self.temp_options.get("figure_size", (10, 8))
+        dpi = self.temp_options.get("figure_dpi", 100)
+        
+        # 인치 단위 크기
+        width_inches, height_inches = fig_size
+        self.size_inches_label.setText(f"Size (inches): {width_inches:.2f} x {height_inches:.2f}")
+        
+        # 픽셀 단위 크기
+        width_pixels = int(width_inches * dpi)
+        height_pixels = int(height_inches * dpi)
+        self.size_pixels_label.setText(f"Size (pixels): {width_pixels} x {height_pixels}")
+        
     def build_fields(self):
         """
         옵션을 섹션별로 그룹화하여 배치
@@ -365,12 +410,17 @@ class ContourSettingsDialog(QtWidgets.QDialog):
     # 나머지 메서드는 그대로 유지
     def store_combo_change(self, key, parent_key, widget, is_bool=False):
         """콤보박스 값 변경을 임시 저장"""
+        # 기존 코드 유지
         text = widget.currentText()
         new_value = True if is_bool and text == "True" else (False if is_bool else text)
         if parent_key:
             self.temp_options[key] = new_value
         else:
             self.temp_options[key] = new_value
+            
+        # 크기 관련 설정이 변경된 경우 이미지 크기 정보 업데이트
+        if key in ["figure_size", "figure_dpi"]:
+            self.update_image_size_info()
 
     def store_lineedit_change(self, key, parent_key, widget):
         """라인에디트 값 변경을 임시 저장"""
@@ -466,11 +516,14 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # Apply validated values
         for key, value in self.temp_options.items():
             PLOT_OPTIONS['graph_option'][key] = value
+        
+        # 이미지 크기 정보 업데이트
+        self.update_image_size_info()
             
         # Call callback (update plot)
         if self.callback:
             self.callback()
-
+            
     def update_field_ui(self, field, value):
         """
         필드 위젯을 원래 값으로 업데이트
