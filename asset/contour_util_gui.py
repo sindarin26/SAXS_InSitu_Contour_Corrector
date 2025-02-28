@@ -305,6 +305,10 @@ class TempCorrectionHelper:
 
         # 5) 라벨 위치는 x좌표 = line.value(), y좌표 = fixed_y (고정)
         line.label.setPos(x_pos, fixed_y)
+        
+        font = QtGui.QFont("Segoe UI", 9)
+        line.label.setFont(font)
+
 
 def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
     """
@@ -406,6 +410,16 @@ class QRangeCorrectionHelper:
         self.peak_index = None  # 피크의 원래 프레임 인덱스
         self.current_index = None  # 현재 처리 중인 프레임 인덱스
         self.initial_range = None
+        
+        # 플롯 위젯의 폰트 설정
+        font = QtGui.QFont("Segoe UI", 9)
+        self.plot_widget.getAxis('bottom').setTickFont(font)
+        self.plot_widget.getAxis('left').setTickFont(font)
+        
+        # 축 레이블 폰트 설정
+        label_style = {'color': '#000', 'font-size': '9pt', 'font-family': 'Segoe UI'}
+        self.plot_widget.getAxis('bottom').setLabel('q', **label_style)
+        self.plot_widget.getAxis('left').setLabel('Intensity', **label_style)
         
     def set_data(self, q_data, intensity_data, peak=None, index=None, current_index=None, q_range=None):
         """
@@ -623,6 +637,9 @@ class QRangeCorrectionHelper:
         
         # 라벨 텍스트 갱신
         line.label.setText(f"{prefix}\n(q = {q_val:.4f}, I = {intensity_val:.4f})")
+
+        font = QtGui.QFont("Segoe UI", 9)
+        line.label.setFont(font)
         
         # 라벨 위치는 x좌표 = line.value(), y좌표 = fixed_y (고정)
         line.label.setPos(x_pos, fixed_y)
