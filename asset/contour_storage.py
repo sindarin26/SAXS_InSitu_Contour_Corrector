@@ -54,7 +54,7 @@ PLOT_OPTIONS = {
     'graph_option': {
         # Figure 설정
         "figure_size": (12, 8),
-        "figure_dpi": 300,
+        "figure_dpi": 200,
         
         # 타이틀 관련 (True/False 바로 아래에 텍스트 배치)
         "figure_title_enable": False,
@@ -90,10 +90,18 @@ PLOT_OPTIONS = {
         "global_ylim": None,
         "temp_xlim": None,
         "temp_grid": True,
+        
+        # Tick 관련 설정 (New)
+        "contour_xticks_count": None,  # X축 눈금 개수 (None = 자동)
+        "contour_yticks_count": None,  # Y축 눈금 개수 (None = 자동) - Y축은 contour와 temp 공유
+        "contour_xticks_interval": None,  # X축 눈금 간격 (None = 자동)
+        "contour_yticks_interval": None,  # Y축 눈금 간격 (None = 자동) - Y축은 contour와 temp 공유
+        "temp_xticks_count": None,     # 온도 그래프 X축 눈금 개수 (None = 자동)
+        "temp_xticks_interval": None,  # 온도 그래프 X축 눈금 간격 (None = 자동)
 
         # 컬러맵 및 색상 관련 설정
         "contour_cmap": "inferno",
-        "contour_levels": 200,
+        "contour_levels": 300,
         "contour_lower_percentile": 0.1,
         "contour_upper_percentile": 98,
         "colorbar_label": "log10(Intensity)",
@@ -105,6 +113,7 @@ PLOT_OPTIONS = {
         "width_ratios": [6, 2],
     }
 }
+
 
 # Process status and selections
 PROCESS_STATUS = {

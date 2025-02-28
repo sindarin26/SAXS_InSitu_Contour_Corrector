@@ -16,6 +16,8 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         
         # 변경된 옵션을 임시로 저장할 딕셔너리
         self.temp_options = {}
+
+        self.field_widgets = {}
         
         # 폰트 설정
         font = QtGui.QFont("Segoe UI", 12)
@@ -61,7 +63,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 "contour_cmap", 
                 "contour_levels",
                 "contour_lower_percentile", "contour_upper_percentile",
-                "width_ratios"
+                "width_ratios", "wspace"
             ],
             "Title": [
                 "figure_title_enable", "figure_title_text",
@@ -76,19 +78,22 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             "X Axis": [
                 "contour_xlabel_enable", "contour_xlabel_text",
                 "temp_xlabel_enable", "temp_xlabel_text",
-                "contour_xlim", "temp_xlim"
+                "contour_xlim", "temp_xlim",
+                "contour_xticks_count", "contour_xticks_interval",
+                "temp_xticks_count", "temp_xticks_interval"
             ],
             "Y Axis": [
                 "contour_ylabel_enable", "contour_ylabel_text",
                 "temp_ylabel_enable", "temp_ylabel_text",
-                "global_ylim"
+                "global_ylim",
+                "contour_yticks_count", "contour_yticks_interval"
             ],
             "Grid": [
                 "contour_grid", "temp_grid"
             ],
             "Legend": [
                 "colorbar_label", "cbar_location",
-                "cbar_pad", "wspace"
+                "cbar_pad"
             ]
         }
         
@@ -126,6 +131,19 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         
         return group_box
 
+    def store_cbar_location_change(self, key, widget):
+        """컬러바 위치 콤보박스 값 변경을 임시 저장하고 legend 옵션도 같이 설정"""
+        text = widget.currentText()
+        
+        # 'None'이 선택되면 None으로 저장하고 legend는 False로 설정
+        if text == "None":
+            self.temp_options[key] = None
+            PLOT_OPTIONS['legend'] = False
+        else:
+            # 그 외는 선택된 텍스트 그대로 저장하고 legend는 True로 설정
+            self.temp_options[key] = text
+            PLOT_OPTIONS['legend'] = True
+
     def create_field_widget(self, key, value, parent_key):
         """
         옵션의 키와 현재 값, 상위 키(parent_key: 없으면 top-level, 있으면 'graph_option')를 받아
@@ -140,16 +158,44 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         label = QtWidgets.QLabel(display_name)
         label.setFont(QtGui.QFont("Segoe UI", 12))
         layout.addWidget(label)
-        
-        # xlim, ylim은 별도의 두 입력창으로 분리 (하나라도 빈칸이면 auto)
-        if key in ("contour_xlim", "global_ylim", "temp_xlim"):
+
+        # 위젯 저장을 위한 딕셔너리
+        field_info = {'type': None, 'widgets': []}
+
+        if key == "cbar_location":
+            input_widget = QtWidgets.QComboBox()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
+            options = ["None", "left"]
+            input_widget.addItems(options)
+            
+            # 현재 값 설정
+            if value is None or (value == "None") or not PLOT_OPTIONS.get('legend', False):
+                input_widget.setCurrentText("None")
+            else:
+                current_index = input_widget.findText(value) if value else -1
+                if current_index >= 0:
+                    input_widget.setCurrentIndex(current_index)
+                else:
+                    input_widget.setCurrentText("left")
+            
+            input_widget.currentIndexChanged.connect(
+                lambda idx, k=key, w=input_widget: 
+                self.store_cbar_location_change(k, w)
+            )
+            
+            field_info['type'] = 'combo'
+            field_info['widgets'].append(input_widget)
+            
+        elif key in ("contour_xlim", "global_ylim", "temp_xlim"):
             container = QtWidgets.QWidget()
             h_layout = QtWidgets.QHBoxLayout(container)
             h_layout.setContentsMargins(0, 0, 0, 0)
+            
             # min 입력창
             le_min = QtWidgets.QLineEdit()
             le_min.setMaximumWidth(50)
             le_min.setFont(QtGui.QFont("Segoe UI", 12))
+            
             # max 입력창
             le_max = QtWidgets.QLineEdit()
             le_max.setMaximumWidth(50)
@@ -163,7 +209,6 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 le_min.setText("")
                 le_max.setText("")
             
-            # 값을 임시 저장하고 Enter 키 누를 때만 처리
             le_min.editingFinished.connect(
                 lambda k=key, pk=parent_key, lmin=le_min, lmax=le_max: 
                 self.store_lim_change(k, pk, lmin, lmax)
@@ -178,10 +223,15 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             h_layout.addWidget(QtWidgets.QLabel("Max"))
             h_layout.addWidget(le_max)
             layout.addWidget(container)
+            
+            field_info['type'] = 'range'
+            field_info['widgets'] = [le_min, le_max]
+            
             return widget
 
-        # 폰트 옵션: key가 "font_"로 시작하면 FontComboBox 사용
+        # 나머지 위젯 유형은 유사한 방식으로 field_info 업데이트
         elif key.startswith("font_"):
+            # 폰트 위젯
             input_widget = QtWidgets.QFontComboBox()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             # 일반적으로 사용되는 폰트만 표시
@@ -207,9 +257,12 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 lambda font, k=key, pk=parent_key: 
                 self.store_font_change(k, pk, font.family())
             )
-
-        # 불리언 값인 경우
+            
+            field_info['type'] = 'font'
+            field_info['widgets'].append(input_widget)
+            
         elif isinstance(value, bool):
+            # 불리언 콤보박스
             input_widget = QtWidgets.QComboBox()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.addItems(["True", "False"])
@@ -219,8 +272,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 self.store_combo_change(k, pk, w, is_bool=True)
             )
             
-        # 컬러맵 옵션: "contour_cmap"는 미리 정의된 인기 컬러맵 목록을 콤보박스로 표시
+            field_info['type'] = 'bool_combo'
+            field_info['widgets'].append(input_widget)
+            
         elif key == "contour_cmap":
+            # 컬러맵 콤보박스
             input_widget = QtWidgets.QComboBox()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             colormaps = ["inferno", "viridis", "plasma", "magma", "jet", "hot", "cool", "rainbow"]
@@ -232,13 +288,15 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 self.store_combo_change(k, pk, w)
             )
             
-        # tuple 또는 list (예: figure_size, width_ratios 등)인 경우
+            field_info['type'] = 'combo'
+            field_info['widgets'].append(input_widget)
+            
         elif isinstance(value, (tuple, list)):
+            # 리스트/튜플 입력
             input_widget = QtWidgets.QWidget()
             hlayout = QtWidgets.QHBoxLayout(input_widget)
             hlayout.setContentsMargins(0, 0, 0, 0)
             
-            # 이전 방식에서 self._edits를 인스턴스 변수로 사용했으나, 지역 변수로 변경
             edits = []
             for item in value:
                 le = QtWidgets.QLineEdit()
@@ -255,8 +313,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                     self.store_list_change(k, pk, e)
                 )
                 
-        # 숫자(int, float)나 None (빈칸이면 None 적용)
+            field_info['type'] = 'list'
+            field_info['widgets'] = edits
+            
         elif isinstance(value, (int, float)) or value is None:
+            # 숫자 입력
             input_widget = QtWidgets.QLineEdit()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             if value is not None:
@@ -266,8 +327,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 self.store_lineedit_change(k, pk, w)
             )
             
-        # 문자열 (일반 텍스트, _text 항목 등)
+            field_info['type'] = 'number'
+            field_info['widgets'].append(input_widget)
+            
         elif isinstance(value, str):
+            # 문자열 입력
             input_widget = QtWidgets.QLineEdit()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.setText(value)
@@ -276,8 +340,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 self.store_lineedit_change(k, pk, w)
             )
             
+            field_info['type'] = 'text'
+            field_info['widgets'].append(input_widget)
+            
         else:
-            # 기본 처리: QLineEdit로 문자열 변환
+            # 기본 입력
             input_widget = QtWidgets.QLineEdit()
             input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.setText(str(value))
@@ -286,7 +353,13 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 self.store_lineedit_change(k, pk, w)
             )
             
+            field_info['type'] = 'text'
+            field_info['widgets'].append(input_widget)
+        
         layout.addWidget(input_widget)
+
+        self.field_widgets[key] = field_info
+
         return widget
 
     # 나머지 메서드는 그대로 유지
@@ -365,15 +438,186 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             self.temp_options[key] = font_family
 
     def apply_all_changes(self):
-        """모든 변경사항을 적용하고 콜백 호출"""
-        # 임시 저장된 변경사항을 PLOT_OPTIONS에 적용
+        """Apply all changes and call callback"""
+        # Validate all changes
+        invalid_fields = self.validate_changes()
+        
+        if invalid_fields:
+            # Show error message for invalid values and revert those fields
+            error_msg = "Invalid values were entered in the following fields:\n\n"
+            for field, reason in invalid_fields:
+                error_msg += f"- {field}: {reason}\n"
+            error_msg += "\nThese fields will be reset to their original values."
+            
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Invalid Input",
+                error_msg
+            )
+            
+            # Restore invalid fields to original values and update UI
+            for field, _ in invalid_fields:
+                original_value = PLOT_OPTIONS['graph_option'][field]
+                self.temp_options[field] = original_value
+                
+                # Update UI widget (depends on field type)
+                self.update_field_ui(field, original_value)
+        
+        # Apply validated values
         for key, value in self.temp_options.items():
             PLOT_OPTIONS['graph_option'][key] = value
             
-        # 콜백 호출 (플롯 업데이트)
+        # Call callback (update plot)
         if self.callback:
             self.callback()
 
+    def update_field_ui(self, field, value):
+        """
+        필드 위젯을 원래 값으로 업데이트
+        
+        Parameters:
+        -----------
+        field : str
+            업데이트할 필드 이름
+        value : any
+            원래 값으로 설정할 값
+        """
+        # 필드 위젯이 저장되어 있는지 확인
+        if field not in self.field_widgets:
+            return
+        
+        field_info = self.field_widgets[field]
+        field_type = field_info.get('type')
+        widgets = field_info.get('widgets', [])
+        
+        if not widgets:
+            return
+        
+        # 필드 유형에 따라 다른 업데이트 로직 적용
+        if field_type == 'range':
+            # 범위 필드 (min, max)
+            if isinstance(value, (tuple, list)) and len(value) == 2 and len(widgets) >= 2:
+                min_val, max_val = value
+                widgets[0].setText("" if min_val is None else str(min_val))
+                widgets[1].setText("" if max_val is None else str(max_val))
+            else:
+                # 값이 유효하지 않으면 빈 문자열로 설정
+                widgets[0].setText("")
+                widgets[1].setText("")
+        
+        elif field_type == 'list':
+            # 리스트/튜플 필드
+            if isinstance(value, (tuple, list)):
+                for i, widget in enumerate(widgets):
+                    if i < len(value):
+                        widget.setText(str(value[i]))
+                    else:
+                        widget.setText("")
+            else:
+                # 값이 유효하지 않으면 모두 빈 문자열로 설정
+                for widget in widgets:
+                    widget.setText("")
+        
+        elif field_type == 'combo' or field_type == 'bool_combo':
+            # 콤보박스 (일반 또는 불리언)
+            combo = widgets[0]
+            
+            if field_type == 'bool_combo':
+                # 불리언 콤보박스
+                combo.setCurrentText(str(value))
+            else:
+                # 일반 콤보박스
+                # 해당 항목이 있으면 선택, 없으면 첫 번째 항목 선택
+                idx = combo.findText(str(value) if value is not None else "")
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+                else:
+                    combo.setCurrentIndex(0)
+        
+        elif field_type == 'font':
+            # 폰트 콤보박스
+            font_combo = widgets[0]
+            try:
+                current_font = QtGui.QFont(value)
+                if current_font.exactMatch():
+                    font_combo.setCurrentFont(current_font)
+                else:
+                    # 폰트가 없으면 기본값으로 Segoe UI 사용
+                    font_combo.setCurrentFont(QtGui.QFont("Segoe UI"))
+            except Exception:
+                # 오류 발생 시 기본값 사용
+                font_combo.setCurrentFont(QtGui.QFont("Segoe UI"))
+        
+        elif field_type in ('number', 'text'):
+            # 숫자 또는 텍스트 입력 필드
+            line_edit = widgets[0]
+            if value is None:
+                line_edit.setText("")
+            else:
+                line_edit.setText(str(value))
+
+    def validate_changes(self):
+        """
+        Validate input values and return invalid fields
+        
+        Returns:
+            list: List of invalid fields in [(field_name, error_reason), ...] format
+        """
+        invalid_fields = []
+        
+        # Validate ranges
+        range_fields = ['contour_xlim', 'global_ylim', 'temp_xlim']
+        for field in range_fields:
+            if field in self.temp_options and self.temp_options[field] is not None:
+                value = self.temp_options[field]
+                if not isinstance(value, (list, tuple)) or len(value) != 2:
+                    invalid_fields.append((field, "Range must be in (min, max) format"))
+                elif value[0] >= value[1]:
+                    invalid_fields.append((field, f"Minimum value ({value[0]}) must be less than maximum value ({value[1]})"))
+        
+        # Validate numeric values
+        numeric_fields = {
+            'figure_dpi': (50, 1200, "DPI must be between 50-1200"),
+            'axes_label_size': (1, 72, "Label size must be between 1-72"),
+            'tick_label_size': (1, 72, "Tick label size must be between 1-72"),
+            'title_size': (1, 72, "Title size must be between 1-72"),
+            'contour_levels': (2, 1000, "Contour levels must be between 2-1000"),
+            'contour_lower_percentile': (0, 50, "Lower percentile must be between 0-50"),
+            'contour_upper_percentile': (50, 100, "Upper percentile must be between 50-100"),
+            'cbar_pad': (0, 1, "Colorbar padding must be between 0-1"),
+            'wspace': (0, 1, "Subplot spacing must be between 0-1"),
+            'contour_xticks_count': (2, 50, "X-axis tick count must be between 2-50"),
+            'contour_yticks_count': (2, 50, "Y-axis tick count must be between 2-50"),
+            'temp_xticks_count': (2, 50, "Temperature plot X-axis tick count must be between 2-50"),
+            'contour_xticks_interval': (0.01, 1000, "X-axis tick interval must be between 0.01-1000"),
+            'contour_yticks_interval': (0.01, 1000, "Y-axis tick interval must be between 0.01-1000"),
+            'temp_xticks_interval': (0.01, 1000, "Temperature plot X-axis tick interval must be between 0.01-1000"),
+        }
+        
+        for field, (min_val, max_val, error_msg) in numeric_fields.items():
+            if field in self.temp_options and self.temp_options[field] is not None:
+                value = self.temp_options[field]
+                if not isinstance(value, (int, float)):
+                    invalid_fields.append((field, "Must be a numeric value"))
+                elif value < min_val or value > max_val:
+                    invalid_fields.append((field, error_msg))
+        
+        # Validate lists/tuples
+        tuple_fields = {
+            'figure_size': (2, "Size must be in (width, height) format"),
+            'width_ratios': (2, "Width ratios must have at least 2 values")
+        }
+        
+        for field, (min_len, error_msg) in tuple_fields.items():
+            if field in self.temp_options and self.temp_options[field] is not None:
+                value = self.temp_options[field]
+                if not isinstance(value, (list, tuple)):
+                    invalid_fields.append((field, "Must be a list format"))
+                elif len(value) < min_len:
+                    invalid_fields.append((field, error_msg))
+        
+        return invalid_fields
+    
     def keyPressEvent(self, event):
         """Enter 키를 누르면 변경사항 적용"""
         if event.key() == QtCore.Qt.Key_Return or event.key() == QtCore.Qt.Key_Enter:

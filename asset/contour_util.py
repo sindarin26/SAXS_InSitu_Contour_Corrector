@@ -151,6 +151,10 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         "contour_title_text": "Contour Plot",
         "contour_xlim": [30, 60],
         "contour_grid": False,
+        "contour_xticks_count": None,  # New: Number of x-axis ticks (None = auto)
+        "contour_yticks_count": None,  # New: Number of y-axis ticks (None = auto)
+        "contour_xticks_interval": None,  # New: Interval between x-axis ticks (None = auto)
+        "contour_yticks_interval": None,  # New: Interval between y-axis ticks (None = auto)
         "temp_xlabel_enable": True,
         "temp_xlabel_text": "Temperature",
         "temp_ylabel_enable": True,
@@ -159,6 +163,10 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         "temp_title_text": "Temperature Plot",
         "temp_xlim": None,
         "temp_grid": True,
+        "temp_xticks_count": None,  # New: Number of x-axis ticks for temp plot (None = auto)
+        "temp_yticks_count": None,  # New: Number of y-axis ticks for temp plot (None = auto)
+        "temp_xticks_interval": None,  # New: Interval between x-axis ticks for temp plot
+        "temp_yticks_interval": None,  # New: Interval between y-axis ticks for temp plot
         "global_ylim": None,
         "wspace": 0.00,
         "width_ratios": [7, 2],
@@ -234,6 +242,49 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         ax_contour.tick_params(axis='y', labelsize=final_opt["tick_label_size"])
         for lbl in ax_contour.get_xticklabels() + ax_contour.get_yticklabels():
             lbl.set_fontname(final_opt["font_tick"])
+        
+        # Apply custom tick settings for contour x-axis
+        if final_opt["contour_xticks_interval"] is not None:
+            # Set ticks based on interval
+            if final_opt["contour_xlim"] is not None:
+                xmin, xmax = final_opt["contour_xlim"]
+            else:
+                xmin, xmax = ax_contour.get_xlim()
+            xticks = np.arange(
+                np.ceil(xmin / final_opt["contour_xticks_interval"]) * final_opt["contour_xticks_interval"],
+                xmax,
+                final_opt["contour_xticks_interval"]
+            )
+            ax_contour.set_xticks(xticks)
+        elif final_opt["contour_xticks_count"] is not None:
+            # Set specific number of ticks
+            if final_opt["contour_xlim"] is not None:
+                xmin, xmax = final_opt["contour_xlim"]
+            else:
+                xmin, xmax = ax_contour.get_xlim()
+            ax_contour.set_xticks(np.linspace(xmin, xmax, final_opt["contour_xticks_count"]))
+            
+        # Apply custom tick settings for contour y-axis
+        if final_opt["contour_yticks_interval"] is not None:
+            # Set ticks based on interval
+            if final_opt["global_ylim"] is not None:
+                ymin, ymax = final_opt["global_ylim"]
+            else:
+                ymin, ymax = ax_contour.get_ylim()
+            yticks = np.arange(
+                np.ceil(ymin / final_opt["contour_yticks_interval"]) * final_opt["contour_yticks_interval"],
+                ymax,
+                final_opt["contour_yticks_interval"]
+            )
+            ax_contour.set_yticks(yticks)
+        elif final_opt["contour_yticks_count"] is not None:
+            # Set specific number of ticks
+            if final_opt["global_ylim"] is not None:
+                ymin, ymax = final_opt["global_ylim"]
+            else:
+                ymin, ymax = ax_contour.get_ylim()
+            ax_contour.set_yticks(np.linspace(ymin, ymax, final_opt["contour_yticks_count"]))
+        
         if final_opt["contour_grid"]:
             ax_contour.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         if legend:
@@ -281,6 +332,39 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         ax_temp.tick_params(axis='y', labelsize=final_opt["tick_label_size"], direction='in')
         for lbl in ax_temp.get_xticklabels() + ax_temp.get_yticklabels():
             lbl.set_fontname(final_opt["font_tick"])
+            
+        # Apply custom tick settings for temperature x-axis
+        if final_opt["temp_xticks_interval"] is not None:
+            # Set ticks based on interval - Temperature plot needs special handling due to invert_xaxis()
+            if final_opt["temp_xlim"] is not None:
+                xmin, xmax = final_opt["temp_xlim"]
+            else:
+                xmin, xmax = ax_temp.get_xlim()
+                
+            # When using invert_xaxis(), Matplotlib swaps the limits internally
+            # So we need to swap them back for our calculation to work properly
+            xmin, xmax = xmax, xmin
+                
+            xticks = np.arange(
+                np.ceil(xmin / final_opt["temp_xticks_interval"]) * final_opt["temp_xticks_interval"],
+                xmax, 
+                final_opt["temp_xticks_interval"]
+            )
+            
+            # Only set ticks if we have valid values
+            if len(xticks) > 0:
+                ax_temp.set_xticks(xticks)
+        elif final_opt["temp_xticks_count"] is not None:
+            # Set specific number of ticks
+            if final_opt["temp_xlim"] is not None:
+                xmin, xmax = final_opt["temp_xlim"]
+            else:
+                xmin, xmax = ax_temp.get_xlim()
+            ax_temp.set_xticks(np.linspace(xmin, xmax, final_opt["temp_xticks_count"]))
+            
+        # Don't set y-axis ticks separately for temperature plot since it's shared with contour plot
+        # The contour plot's y-axis settings will apply to both plots through sharey=True
+            
         if final_opt["temp_grid"]:
             ax_temp.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         if final_opt["figure_title_enable"]:
@@ -319,6 +403,49 @@ def plot_contour(contour_data, temp=False, legend=True, graph_option=None, GUI=F
         ax.tick_params(axis='y', labelsize=final_opt["tick_label_size"])
         for lbl in ax.get_xticklabels() + ax.get_yticklabels():
             lbl.set_fontname(final_opt["font_tick"])
+            
+        # Apply custom tick settings for x-axis
+        if final_opt["contour_xticks_interval"] is not None:
+            # Set ticks based on interval
+            if final_opt["contour_xlim"] is not None:
+                xmin, xmax = final_opt["contour_xlim"]
+            else:
+                xmin, xmax = ax.get_xlim()
+            xticks = np.arange(
+                np.ceil(xmin / final_opt["contour_xticks_interval"]) * final_opt["contour_xticks_interval"],
+                xmax,
+                final_opt["contour_xticks_interval"]
+            )
+            ax.set_xticks(xticks)
+        elif final_opt["contour_xticks_count"] is not None:
+            # Set specific number of ticks
+            if final_opt["contour_xlim"] is not None:
+                xmin, xmax = final_opt["contour_xlim"]
+            else:
+                xmin, xmax = ax.get_xlim()
+            ax.set_xticks(np.linspace(xmin, xmax, final_opt["contour_xticks_count"]))
+            
+        # Apply custom tick settings for y-axis
+        if final_opt["contour_yticks_interval"] is not None:
+            # Set ticks based on interval
+            if final_opt["global_ylim"] is not None:
+                ymin, ymax = final_opt["global_ylim"]
+            else:
+                ymin, ymax = ax.get_ylim()
+            yticks = np.arange(
+                np.ceil(ymin / final_opt["contour_yticks_interval"]) * final_opt["contour_yticks_interval"],
+                ymax,
+                final_opt["contour_yticks_interval"]
+            )
+            ax.set_yticks(yticks)
+        elif final_opt["contour_yticks_count"] is not None:
+            # Set specific number of ticks
+            if final_opt["global_ylim"] is not None:
+                ymin, ymax = final_opt["global_ylim"]
+            else:
+                ymin, ymax = ax.get_ylim()
+            ax.set_yticks(np.linspace(ymin, ymax, final_opt["contour_yticks_count"]))
+            
         if final_opt["contour_grid"]:
             ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         if legend:
