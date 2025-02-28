@@ -1,7 +1,7 @@
 #asset/contour_page_sdd.py
 
 from asset.contour_sdd_ui import Ui_SDD_correction
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from asset.contour_storage import DATA, PARAMS
 from asset.contour_page_sdd_0 import SDDSettingsPage
 from asset.contour_page_sdd_1 import SDDPeakTrackingPage
@@ -12,6 +12,14 @@ class SDDCorrectionDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.ui = Ui_SDD_correction()
         self.ui.setupUi(self)
+        
+        # 윈도우 플래그 설정 - 최소화, 최대화 버튼 추가 및 도움말(?) 버튼 제거
+        self.setWindowFlags(
+            self.windowFlags() | 
+            QtCore.Qt.WindowMinMaxButtonsHint | 
+            QtCore.Qt.WindowCloseButtonHint & 
+            ~QtCore.Qt.WindowContextHelpButtonHint
+        )
         
         # Initialize pages
         self.settings_page = SDDSettingsPage(self)
