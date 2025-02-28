@@ -586,7 +586,7 @@ class PeakTrackingPage(QtCore.QObject):
         print(f"Found peak list: {self.main.PEAK_EXTRACT_DATA['found_peak_list']}")
         
         # 로딩 다이얼로그 추가
-        loading = LoadingDialog(self.main, "피크 데이터 컨투어 처리중...")
+        loading = LoadingDialog(self.main, "Processing contour plot...")
         loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
         loading.show()
         QtWidgets.QApplication.processEvents()
