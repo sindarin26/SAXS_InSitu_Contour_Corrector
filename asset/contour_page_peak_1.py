@@ -27,6 +27,8 @@ class PeakTrackingPage(QtCore.QObject):
         self.check_peak_range_mode = False  # 피크 범위 체크 모드 플래그 추가
         self.current_peak_name = None
         
+        self.go_back_status = False
+        
         # UI elements from page 1 (index 1)
         self.QGV_qrange = self.ui.QGV_qrange
         self.L_current_status_1 = self.ui.L_current_status_1
@@ -69,7 +71,8 @@ class PeakTrackingPage(QtCore.QObject):
         self.PB_stop_auto_tracking.clicked.connect(self.on_stop_tracking)
         self.PB_adjust_mode.clicked.connect(self.on_enter_adjust_mode)
         self.PB_find_another_peak.clicked.connect(self.on_find_another_peak)
-        self.PB_check_peak_range.clicked.connect(self.on_check_peak_range)  # 피크 범위 확인 버튼 핸들러 연결
+        self.PB_check_peak_range.clicked.connect(self.on_check_peak_range)
+
 
 
     
@@ -89,6 +92,10 @@ class PeakTrackingPage(QtCore.QObject):
         self.manual_adjust = False
         self.current_peak_name = None
         
+        # Set page_1_initial_visit to True when tracking is initialized
+        if hasattr(self.main, 'page_1_initial_visit'):
+            self.main.page_1_initial_visit = True
+        
         # Setup q-range selection graph
         self.setup_q_range_graph()
         
@@ -99,6 +106,7 @@ class PeakTrackingPage(QtCore.QObject):
         
         # Set initial button states
         self.update_ui_state()
+
     
     def setup_q_range_graph(self, mode=None):
         """
@@ -248,20 +256,34 @@ class PeakTrackingPage(QtCore.QObject):
 
     
     def on_back_to_settings(self):
-        """Handle back button to settings page"""
-        # Show warning dialog
-        reply = QtWidgets.QMessageBox.question(
-            self.main,
-            "Warning",
-            "Going back will reset all tracking data. Continue?",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.No
-        )
+        """
+        Handle back button behavior:
+        - If on page 1 and it's initial visit: go to settings page
+        - Otherwise: go to contour page
+        """
+        current_index = self.ui.stackedWidget.currentIndex()
         
-        if reply == QtWidgets.QMessageBox.Yes:
-            # Reset data and go back to settings page
-            self.main.init_peak_data(self.contour_data)
-            self.ui.stackedWidget.setCurrentIndex(0)
+        # Check if we're on page 1 (index 1) and it's the initial visit
+        if current_index == 1 and hasattr(self.main, 'page_1_initial_visit') and self.main.page_1_initial_visit:
+            # Show warning dialog for initial visit to page 1
+            reply = QtWidgets.QMessageBox.question(
+                self.main,
+                "Warning",
+                "Going back will reset all tracking data. Continue?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No
+            )
+            
+            if reply == QtWidgets.QMessageBox.Yes:
+                # Reset data and go back to settings page
+                self.main.init_peak_data(self.contour_data)
+                self.ui.stackedWidget.setCurrentIndex(0)
+        else:
+            # For all other cases, go to contour page (index 2)
+            self.go_back_status = True
+            self.PB_stop_auto_tracking.setEnabled(True)
+            self.ui.stackedWidget.setCurrentIndex(2)
+
     
     def on_apply_qrange(self):
         # Get selected q-range
@@ -651,6 +673,12 @@ class PeakTrackingPage(QtCore.QObject):
         - If in check peak range mode: move to page 4 for peak range inspection
         """
         print(f"Next button clicked - current state: auto_tracking={self.auto_tracking}, manual_adjust={self.manual_adjust}, check_peak_range={self.check_peak_range_mode}")
+
+        if self.go_back_status is True:
+            self.go_back_status = False
+            self.PB_stop_auto_tracking.setEnabled(False)
+            self.ui.stackedWidget.setCurrentIndex(1)
+            return
         
         if self.check_peak_range_mode:
             if self.current_peak_name is None:
