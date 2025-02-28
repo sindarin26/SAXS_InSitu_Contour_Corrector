@@ -8,6 +8,8 @@ from asset.contour_util import theta_to_q, q_to_2theta, calculate_corrected_sdd
 import pyqtgraph as pg
 import traceback
 import copy
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from asset.page_asset import LoadingDialog
 
@@ -251,7 +253,7 @@ class SDDFittingPage(QtCore.QObject):
         임시 보간 데이터를 사용하여 성능 향상.
         """
         # 로딩 다이얼로그 생성
-        loading = LoadingDialog(self.main, "컨투어 미리보기 생성중...")
+        loading = LoadingDialog(self.main, "Preparing preview plot...")
         loading.progress.setMaximum(0)  # 불확정적 진행 표시(스피닝 인디케이터)
         loading.show()
         QtWidgets.QApplication.processEvents()
@@ -289,11 +291,6 @@ class SDDFittingPage(QtCore.QObject):
             preview_graph_option['temp'] = False
             preview_graph_option['contour_xlabel_enable'] = False
             preview_graph_option['contour_ylabel_enable'] = False
-
-            # 3) 실제 Matplotlib 플롯 생성 - 직접 보간 데이터 사용
-            import matplotlib.pyplot as plt
-            from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-            import numpy as np
             
             fig, ax = plt.subplots(figsize=PLOT_OPTIONS['graph_option']['figure_size'], 
                                 dpi=PLOT_OPTIONS['graph_option']['figure_dpi'])
