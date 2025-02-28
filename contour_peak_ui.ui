@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1424</width>
-    <height>807</height>
+    <width>1400</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,6 +16,11 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
+     <property name="font">
+      <font>
+       <family>Segoe UI</family>
+      </font>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -23,6 +28,11 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QFrame" name="frame_17">
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
+         </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -32,6 +42,11 @@
          <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="1,1">
           <item>
            <widget class="QFrame" name="frame_9">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -53,6 +68,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Fitting Model</string>
                </property>
@@ -60,6 +80,11 @@
              </item>
              <item>
               <widget class="QComboBox" name="CB_fitting_model_sdd">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <item>
                 <property name="text">
                  <string>Gaussian</string>
@@ -82,6 +107,11 @@
           </item>
           <item>
            <widget class="QFrame" name="frame_19">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -96,6 +126,11 @@
        </item>
        <item>
         <widget class="QFrame" name="frame_8">
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
+         </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -105,6 +140,11 @@
          <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1">
           <item>
            <widget class="QFrame" name="frame">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -135,16 +175,32 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Note</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="LE_note"/>
+              <widget class="QLineEdit" name="LE_note">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
+              </widget>
              </item>
              <item>
               <spacer name="horizontalSpacer">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
@@ -179,6 +235,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Apply</string>
                </property>
@@ -192,6 +253,11 @@
        </item>
        <item>
         <widget class="QFrame" name="frame_31">
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
+         </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -201,6 +267,11 @@
          <layout class="QHBoxLayout" name="horizontalLayout_29" stretch="1,1">
           <item>
            <widget class="QFrame" name="frame_32">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -230,7 +301,8 @@
                </property>
                <property name="font">
                 <font>
-                 <pointsize>13</pointsize>
+                 <family>Segoe UI</family>
+                 <pointsize>9</pointsize>
                 </font>
                </property>
                <property name="text">
@@ -239,7 +311,13 @@
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="L_q_threshold"/>
+              <widget class="QLineEdit" name="L_q_threshold">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="LE_q_threshold">
@@ -261,6 +339,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Current Value</string>
                </property>
@@ -274,6 +357,11 @@
           </item>
           <item>
            <widget class="QFrame" name="frame_33">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -303,7 +391,8 @@
                </property>
                <property name="font">
                 <font>
-                 <pointsize>13</pointsize>
+                 <family>Segoe UI</family>
+                 <pointsize>9</pointsize>
                 </font>
                </property>
                <property name="text">
@@ -312,7 +401,13 @@
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="LE_intensity_threshold"/>
+              <widget class="QLineEdit" name="LE_intensity_threshold">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="L_intensity_threshold">
@@ -334,6 +429,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Current Value</string>
                </property>
@@ -350,6 +450,11 @@
        </item>
        <item>
         <widget class="QFrame" name="frame_34">
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
+         </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -359,6 +464,11 @@
          <layout class="QHBoxLayout" name="horizontalLayout_32" stretch="1,1">
           <item>
            <widget class="QFrame" name="frame_35">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -388,7 +498,8 @@
                </property>
                <property name="font">
                 <font>
-                 <pointsize>13</pointsize>
+                 <family>Segoe UI</family>
+                 <pointsize>9</pointsize>
                 </font>
                </property>
                <property name="text">
@@ -397,7 +508,13 @@
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="LE_fwhm_q_threshold"/>
+              <widget class="QLineEdit" name="LE_fwhm_q_threshold">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="L_fwhm_q_threshold">
@@ -419,6 +536,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Current Value</string>
                </property>
@@ -432,6 +554,11 @@
           </item>
           <item>
            <widget class="QFrame" name="frame_36">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -461,7 +588,8 @@
                </property>
                <property name="font">
                 <font>
-                 <pointsize>13</pointsize>
+                 <family>Segoe UI</family>
+                 <pointsize>9</pointsize>
                 </font>
                </property>
                <property name="text">
@@ -470,7 +598,13 @@
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="LE_fwhm_comparison"/>
+              <widget class="QLineEdit" name="LE_fwhm_comparison">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QLabel" name="L_fwhm_comparison">
@@ -492,6 +626,11 @@
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Current Value</string>
                </property>
@@ -508,6 +647,11 @@
        </item>
        <item>
         <spacer name="verticalSpacer">
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
+         </property>
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -526,6 +670,11 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <family>Segoe UI</family>
+          </font>
          </property>
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
@@ -548,6 +697,11 @@
           </property>
           <item>
            <widget class="QFrame" name="frame_6">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
             </property>
@@ -557,6 +711,11 @@
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
               <widget class="QLabel" name="label_5">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
                </property>
@@ -567,6 +726,11 @@
              </item>
              <item>
               <widget class="QLabel" name="label_11">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>9A Beamline, PAL</string>
                </property>
@@ -583,6 +747,11 @@
           </item>
           <item>
            <widget class="QFrame" name="frame_7">
+            <property name="font">
+             <font>
+              <family>Segoe UI</family>
+             </font>
+            </property>
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
             </property>
@@ -598,6 +767,11 @@
              </property>
              <item>
               <widget class="QPushButton" name="PB_quit">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Quit</string>
                </property>
@@ -605,6 +779,11 @@
              </item>
              <item>
               <widget class="QPushButton" name="PB_next_1">
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                </font>
+               </property>
                <property name="text">
                 <string>Next</string>
                </property>
@@ -633,7 +812,9 @@
            <widget class="QLabel" name="L_current_status_1">
             <property name="font">
              <font>
+              <family>Segoe UI</family>
               <pointsize>20</pointsize>
+              <weight>75</weight>
               <bold>true</bold>
              </font>
             </property>
@@ -739,7 +920,9 @@
            <widget class="QLabel" name="L_current_status_2">
             <property name="font">
              <font>
+              <family>Segoe UI</family>
               <pointsize>20</pointsize>
+              <weight>75</weight>
               <bold>true</bold>
              </font>
             </property>
@@ -867,7 +1050,9 @@
            <widget class="QLabel" name="L_current_status_3">
             <property name="font">
              <font>
+              <family>Segoe UI</family>
               <pointsize>20</pointsize>
+              <weight>75</weight>
               <bold>true</bold>
              </font>
             </property>
@@ -1000,6 +1185,7 @@
            <widget class="QComboBox" name="CB_index">
             <property name="font">
              <font>
+              <family>Segoe UI</family>
               <pointsize>20</pointsize>
              </font>
             </property>

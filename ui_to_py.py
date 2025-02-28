@@ -109,7 +109,7 @@ if app:
                 sys.exit(1)
 
 if __name__ == "__main__":
-    ui_file_dir = r"/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Python/SAXS_InSitu_Contour_Corrector"
+    ui_file_dir = r"C:\Users\user\OneDrive - postech.ac.kr\Python\SAXS_InSitu_Contour_Corrector"
     if ui_file_dir:
         convert_ui_to_py(ui_file_dir)
     else:

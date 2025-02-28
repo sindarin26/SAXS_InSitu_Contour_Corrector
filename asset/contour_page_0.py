@@ -15,9 +15,14 @@ class BrowsePage(QtCore.QObject):
         self.debug_init()
 
     def debug_init(self):
-        self.LE_spec_log_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/log241219-HS")
-        self.LE_dat_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged/")
-        self.LE_output_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Python/SAXS_InSitu_Contour_Corrector/ready/test_output")
+        if os.name == 'nt':  # Windows
+            self.LE_spec_log_dir.setText(r"C:\Users\user\OneDrive - postech.ac.kr\Seminar\2024-12-19 whole\2024-12-19\HS\log241219-HS")
+            self.LE_dat_dir.setText(r"C:\Users\user\OneDrive - postech.ac.kr\Seminar\2024-12-19 whole\2024-12-19\HS\Averaged")
+            self.LE_output_dir.setText(r"C:\Users\user\OneDrive - postech.ac.kr\Seminar\2024-12-19 whole\2024-12-19\HS\Averaged")
+        else:  # Mac/Unix
+            self.LE_spec_log_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/log241219-HS")
+            self.LE_dat_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Seminar/2024-12-19 whole/2024-12-19/HS/Averaged/")
+            self.LE_output_dir.setText("/Users/yhk/Library/CloudStorage/OneDrive-postech.ac.kr/Python/SAXS_InSitu_Contour_Corrector/ready/test_output")
 
 
     def setupPageWidgets(self):
