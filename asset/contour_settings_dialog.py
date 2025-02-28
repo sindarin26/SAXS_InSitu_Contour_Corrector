@@ -8,13 +8,23 @@ class ContourSettingsDialog(QtWidgets.QDialog):
     def __init__(self, callback, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Contour Plot Settings")
+        
+        # 도움말(?) 버튼 제거
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+        
         self.callback = callback  # 옵션이 변경될 때마다 호출할 콜백 (예: replot)
         
         # 변경된 옵션을 임시로 저장할 딕셔너리
         self.temp_options = {}
         
+        # 폰트 설정
+        font = QtGui.QFont("Segoe UI", 9)
+        self.setFont(font)
+        
         # 메인 레이아웃에 스크롤 영역 추가 (옵션이 많을 경우 대비)
         main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setSpacing(15)
+        
         scroll_area = QtWidgets.QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         main_layout.addWidget(scroll_area)
@@ -22,9 +32,9 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         container = QtWidgets.QWidget()
         scroll_area.setWidget(container)
         
-        self.grid_layout = QtWidgets.QGridLayout(container)
-        # 4열 배치: 각 셀에 옵션 위젯(레이블+입력 위젯)
-        self.grid_layout.setSpacing(10)
+        # 수직 레이아웃으로 변경하여 섹션별로 그룹박스 추가
+        self.container_layout = QtWidgets.QVBoxLayout(container)
+        self.container_layout.setSpacing(15)
         
         # 적용 버튼 추가
         self.apply_button = QtWidgets.QPushButton("Apply Changes")
@@ -36,62 +46,85 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 원본 옵션의 깊은 복사 생성
         import copy
         self.temp_options = copy.deepcopy(PLOT_OPTIONS['graph_option'])
+        
+        # 창 크기 설정
+        self.resize(600, 700)
 
     def build_fields(self):
         """
-        옵션을 그룹화하여 배치하고, 3열 레이아웃을 유지하면서 빈 공간을 삽입.
+        옵션을 섹션별로 그룹화하여 배치
         """
-        entries = []
+        # 섹션 정의: (섹션 이름, 포함할 옵션들)
+        sections = {
+            "Contour Settings": [
+                "figure_size", "figure_dpi", 
+                "contour_cmap", 
+                "contour_levels",
+                "contour_lower_percentile", "contour_upper_percentile",
+                "width_ratios"
+            ],
+            "Title": [
+                "figure_title_enable", "figure_title_text",
+                "contour_title_enable", "contour_title_text",
+                "temp_title_enable", "temp_title_text",
+                "title_size"
+            ],
+            "Font": [
+                "font_label", "font_tick", "font_title",
+                "axes_label_size", "tick_label_size"
+            ],
+            "X Axis": [
+                "contour_xlabel_enable", "contour_xlabel_text",
+                "temp_xlabel_enable", "temp_xlabel_text",
+                "contour_xlim", "temp_xlim"
+            ],
+            "Y Axis": [
+                "contour_ylabel_enable", "contour_ylabel_text",
+                "temp_ylabel_enable", "temp_ylabel_text",
+                "global_ylim"
+            ],
+            "Grid": [
+                "contour_grid", "temp_grid"
+            ],
+            "Legend": [
+                "colorbar_label", "cbar_location",
+                "cbar_pad", "wspace"
+            ]
+        }
         
-        # PLOT_OPTIONS에서 순서에 맞춰 항목 가져오기
-        options_order = [
-            "figure_size", "figure_dpi",  None, # Figure 설정
-
-            "figure_title_enable", "figure_title_text", None,  # Title 관련
-            "contour_title_enable", "contour_title_text", None,
-            "temp_title_enable", "temp_title_text", None,
-
-            "font_label", "font_tick", "font_title",  # 폰트 설정
-
-            "axes_label_size", "tick_label_size", "title_size",  # 라벨 크기 설정
-
-            "contour_xlabel_enable", "contour_xlabel_text", None,  # X축 설정
-            "contour_ylabel_enable", "contour_ylabel_text", None,  # Y축 설정
-            "temp_xlabel_enable", "temp_xlabel_text", None,
-            "temp_ylabel_enable", "temp_ylabel_text", None,
-
-            "contour_grid", "contour_xlim", "global_ylim",  # Grid 및 범위 설정
-            "temp_grid", "temp_xlim", None,
-
-            "contour_cmap", "colorbar_label", "cbar_location",  # 컬러맵 설정
-            "cbar_pad", "contour_levels", None,
-            "contour_lower_percentile", "contour_upper_percentile", None,
-
-            "wspace", "width_ratios", None  # 배치 관련
-        ]
-
-        for key in options_order:
-            if key is None:
-                entries.append((None, None, None))  # 빈칸 추가
-            else:
-                entries.append((key, PLOT_OPTIONS['graph_option'][key], 'graph_option'))
-
-        col_count = 3  # 3열 유지
+        # 각 섹션별로 그룹박스 생성 및 옵션 추가
+        for section_name, options in sections.items():
+            group_box = self.create_section_group(section_name, options)
+            self.container_layout.addWidget(group_box)
+    
+    def create_section_group(self, title, options):
+        """
+        섹션 제목과 옵션 목록을 받아 그룹박스를 생성
+        """
+        group_box = QtWidgets.QGroupBox(title)
+        grid_layout = QtWidgets.QGridLayout(group_box)
+        grid_layout.setSpacing(10)
+        
+        # 그룹박스 제목 폰트 설정 - Bold에서 일반으로 변경
+        title_font = QtGui.QFont("Segoe UI", 9)  # Bold 제거
+        group_box.setFont(title_font)
+        
+        # 옵션 배치 (2열로 배치)
         row = 0
         col = 0
-        for key, value, parent_key in entries:
-            if key is None:
-                # 빈칸을 넣을 때는 QWidget을 추가하여 유지
-                empty_widget = QtWidgets.QWidget()
-                self.grid_layout.addWidget(empty_widget, row, col)
-            else:
-                field_widget = self.create_field_widget(key, value, parent_key)
-                self.grid_layout.addWidget(field_widget, row, col)
-
-            col += 1
-            if col >= col_count:
-                col = 0
-                row += 1
+        col_count = 2  # 2열 레이아웃
+        
+        for key in options:
+            if key in PLOT_OPTIONS['graph_option']:
+                field_widget = self.create_field_widget(key, PLOT_OPTIONS['graph_option'][key], 'graph_option')
+                grid_layout.addWidget(field_widget, row, col)
+                
+                col += 1
+                if col >= col_count:
+                    col = 0
+                    row += 1
+        
+        return group_box
 
     def create_field_widget(self, key, value, parent_key):
         """
@@ -102,20 +135,26 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(widget)
         layout.setContentsMargins(5, 5, 5, 5)
         
-        label = QtWidgets.QLabel(key)
+        # 옵션명을 읽기 쉽게 표시
+        display_name = key.replace("_", " ").title()
+        label = QtWidgets.QLabel(display_name)
+        label.setFont(QtGui.QFont("Segoe UI", 9))
         layout.addWidget(label)
         
         # xlim, ylim은 별도의 두 입력창으로 분리 (하나라도 빈칸이면 auto)
-        if key in ("contour_xlim", "global_ylim"):
+        if key in ("contour_xlim", "global_ylim", "temp_xlim"):
             container = QtWidgets.QWidget()
             h_layout = QtWidgets.QHBoxLayout(container)
             h_layout.setContentsMargins(0, 0, 0, 0)
             # min 입력창
             le_min = QtWidgets.QLineEdit()
             le_min.setMaximumWidth(50)
+            le_min.setFont(QtGui.QFont("Segoe UI", 9))
             # max 입력창
             le_max = QtWidgets.QLineEdit()
             le_max.setMaximumWidth(50)
+            le_max.setFont(QtGui.QFont("Segoe UI", 9))
+            
             if isinstance(value, (tuple, list)) and len(value) == 2:
                 min_val, max_val = value
                 le_min.setText("" if min_val is None else str(min_val))
@@ -144,6 +183,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 폰트 옵션: key가 "font_"로 시작하면 FontComboBox 사용
         elif key.startswith("font_"):
             input_widget = QtWidgets.QFontComboBox()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
             # 일반적으로 사용되는 폰트만 표시
             input_widget.setFontFilters(QtWidgets.QFontComboBox.ScalableFonts)
             
@@ -156,11 +196,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
                 if current_font.exactMatch():
                     input_widget.setCurrentFont(current_font)
                 else:
-                    # 폰트가 없으면 기본값으로 Times New Roman 사용
-                    input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
+                    # 폰트가 없으면 기본값으로 Segoe UI 사용
+                    input_widget.setCurrentFont(QtGui.QFont("Segoe UI"))
             except Exception:
                 # 오류 발생 시 기본값 사용
-                input_widget.setCurrentFont(QtGui.QFont("Times New Roman"))
+                input_widget.setCurrentFont(QtGui.QFont("Segoe UI"))
             
             # 폰트 변경 시 임시 저장
             input_widget.currentFontChanged.connect(
@@ -171,6 +211,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 불리언 값인 경우
         elif isinstance(value, bool):
             input_widget = QtWidgets.QComboBox()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
             input_widget.addItems(["True", "False"])
             input_widget.setCurrentText(str(value))
             input_widget.currentIndexChanged.connect(
@@ -181,7 +222,8 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 컬러맵 옵션: "contour_cmap"는 미리 정의된 인기 컬러맵 목록을 콤보박스로 표시
         elif key == "contour_cmap":
             input_widget = QtWidgets.QComboBox()
-            colormaps = ["inferno", "viridis", "plasma", "magma", "jet"]
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            colormaps = ["inferno", "viridis", "plasma", "magma", "jet", "hot", "cool", "rainbow"]
             input_widget.addItems(colormaps)
             current_val = value if value in colormaps else "inferno"
             input_widget.setCurrentText(current_val)
@@ -195,21 +237,28 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             input_widget = QtWidgets.QWidget()
             hlayout = QtWidgets.QHBoxLayout(input_widget)
             hlayout.setContentsMargins(0, 0, 0, 0)
-            self._edits = []  # 각 요소에 대한 QLineEdit들을 저장할 리스트
+            
+            # 이전 방식에서 self._edits를 인스턴스 변수로 사용했으나, 지역 변수로 변경
+            edits = []
             for item in value:
                 le = QtWidgets.QLineEdit()
+                le.setFont(QtGui.QFont("Segoe UI", 9))
                 le.setMaximumWidth(50)
                 le.setText(str(item))
-                le.editingFinished.connect(
-                    lambda k=key, pk=parent_key, edits=self._edits: 
-                    self.store_list_change(k, pk, edits)
-                )
                 hlayout.addWidget(le)
-                self._edits.append(le)
+                edits.append(le)
+            
+            # 모든 QLineEdit을 저장하고 editingFinished 신호에 연결
+            for le in edits:
+                le.editingFinished.connect(
+                    lambda k=key, pk=parent_key, e=edits: 
+                    self.store_list_change(k, pk, e)
+                )
                 
         # 숫자(int, float)나 None (빈칸이면 None 적용)
         elif isinstance(value, (int, float)) or value is None:
             input_widget = QtWidgets.QLineEdit()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
             if value is not None:
                 input_widget.setText(str(value))
             input_widget.editingFinished.connect(
@@ -220,6 +269,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 문자열 (일반 텍스트, _text 항목 등)
         elif isinstance(value, str):
             input_widget = QtWidgets.QLineEdit()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
             input_widget.setText(value)
             input_widget.editingFinished.connect(
                 lambda k=key, pk=parent_key, w=input_widget: 
@@ -229,6 +279,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         else:
             # 기본 처리: QLineEdit로 문자열 변환
             input_widget = QtWidgets.QLineEdit()
+            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
             input_widget.setText(str(value))
             input_widget.editingFinished.connect(
                 lambda k=key, pk=parent_key, w=input_widget: 
@@ -238,6 +289,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         layout.addWidget(input_widget)
         return widget
 
+    # 나머지 메서드는 그대로 유지
     def store_combo_change(self, key, parent_key, widget, is_bool=False):
         """콤보박스 값 변경을 임시 저장"""
         text = widget.currentText()
