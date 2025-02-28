@@ -1,5 +1,5 @@
 #asset.contour_page_2.py
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from asset.contour_storage import DATA, PATH_INFO, PLOT_OPTIONS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog, DragDropLineEdit, normalize_path
 from asset.contour_util import plot_contour
@@ -47,8 +47,15 @@ class ContourPlotPage(QtCore.QObject):
         self.GV_contour.installEventFilter(self)
 
     def eventFilter(self, obj, event):
-        if obj == self.GV_contour and event.type() == QtCore.QEvent.Resize:
-            self.resize_figure_to_view()
+        """그래픽스뷰 크기 변경 시 이미지 크기도 조정"""
+        if obj == self.GV_contour.viewport() and event.type() == QtCore.QEvent.Resize:
+            if hasattr(self, 'GV_contour') and self.GV_contour.scene():
+                items = self.GV_contour.scene().items()
+                if items:
+                    pixmap_item = next((item for item in items if isinstance(item, QtWidgets.QGraphicsPixmapItem)), None)
+                    if pixmap_item:
+                        self.GV_contour.fitInView(pixmap_item, QtCore.Qt.KeepAspectRatio)
+        
         return super().eventFilter(obj, event)
 
     def setup_output_widgets(self):
@@ -123,7 +130,7 @@ class ContourPlotPage(QtCore.QObject):
             )
 
     def create_contour_plot(self):
-        """Create and display the contour plot"""
+        """Create and display the contour plot using export_data's temp mode"""
         if not DATA.get('contour_data'):
             print("No contour data available")
             return
@@ -135,24 +142,8 @@ class ContourPlotPage(QtCore.QObject):
         QtWidgets.QApplication.processEvents()
             
         try:
-            # Calculate minimum size needed for the figure
-            fig_size = PLOT_OPTIONS['graph_option']['figure_size']
-            dpi = PLOT_OPTIONS['graph_option']['figure_dpi']
-            min_width = int(fig_size[0] * dpi / 4)  # 최소 크기는 원본의 1/4
-            min_height = int(fig_size[1] * dpi / 4)
-            
-            # Set minimum size for GraphicsView
-            self.GV_contour.setMinimumSize(min_width, min_height)
-                
-            # Clear existing layout
-            if self.GV_contour.layout():
-                QtWidgets.QWidget().setLayout(self.GV_contour.layout())
-                
-            # Create layout
-            layout = QtWidgets.QVBoxLayout()
-            
-            # Create figure with original size from PLOT_OPTIONS
-            canvas = plot_contour(
+            # 임시 그래프 파일 생성을 위해 임시 캔버스 먼저 생성
+            self.canvas = plot_contour(
                 DATA['contour_data'],
                 temp=PLOT_OPTIONS['temp'],
                 legend=PLOT_OPTIONS['legend'],
@@ -160,36 +151,56 @@ class ContourPlotPage(QtCore.QObject):
                 GUI=True
             )
             
-            if canvas:
-                # Create a container widget
-                container = QtWidgets.QWidget()
-                container_layout = QtWidgets.QVBoxLayout(container)
-                container_layout.setContentsMargins(0, 0, 0, 0)
-                container_layout.addWidget(canvas)
-                
-                # Set policies
-                canvas.setSizePolicy(
-                    QtWidgets.QSizePolicy.Ignored,
-                    QtWidgets.QSizePolicy.Ignored
+            if not self.canvas:
+                loading.close()
+                QtWidgets.QMessageBox.warning(
+                    self.main, 
+                    "Warning", 
+                    "Failed to create contour plot canvas."
                 )
-                container.setSizePolicy(
-                    QtWidgets.QSizePolicy.Expanding,
-                    QtWidgets.QSizePolicy.Expanding
+                return
+            
+            # 임시 모드로 그래프 저장 후 이미지 파일로 불러오기
+            temp_image_path = self.export_data(temp_mode=True)
+            
+            if not temp_image_path or not os.path.exists(temp_image_path):
+                loading.close()
+                QtWidgets.QMessageBox.warning(
+                    self.main, 
+                    "Warning", 
+                    "Failed to create temporary image file."
                 )
+                return
+            
+            # 이미지를 QGraphicsView에 표시
+            scene = QtWidgets.QGraphicsScene()
+            pixmap = QtGui.QPixmap(temp_image_path)
+            
+            if pixmap.isNull():
+                loading.close()
+                QtWidgets.QMessageBox.warning(
+                    self.main, 
+                    "Warning", 
+                    "Failed to load image from temporary file."
+                )
+                return
+            
+            # GraphicsView 설정
+            self.GV_contour.setScene(scene)
+            pixmap_item = scene.addPixmap(pixmap)
+            
+            # 그래픽스뷰 맞추기
+            self.GV_contour.fitInView(pixmap_item, QtCore.Qt.KeepAspectRatio)
+            
+            # 이벤트 필터 설정
+            if not hasattr(self, 'resize_event_connected'):
+                self.GV_contour.viewport().installEventFilter(self)
+                self.resize_event_connected = True
                 
-                # Add to main layout
-                layout.setContentsMargins(0, 0, 0, 0)
-                layout.addWidget(container)
-                
-                # Set up GraphicsView
-                self.GV_contour.setLayout(layout)
-                self.canvas = canvas
-                
-                # Initial resize
-                self.resize_figure_to_view()
         finally:
             # 로딩 다이얼로그 닫기
             loading.close()
+
 
     def resize_figure_to_view(self):
         """Resize the figure to fit the view while maintaining aspect ratio"""
@@ -251,33 +262,52 @@ class ContourPlotPage(QtCore.QObject):
                 f"Failed to create output directory:\n{str(e)}"
             )
 
-    def export_data(self):
-        """Export contour image and optionally temperature and extracted data to files"""
+    def export_data(self, temp_mode=False):
+        """
+        Export contour image and optionally temperature and extracted data to files
+        
+        Parameters:
+        -----------
+        temp_mode : bool
+            If True, save to a temporary file and return the path for display
+        
+        Returns:
+        --------
+        str or None
+            Path to saved image file if temp_mode=True, None otherwise
+        """
         if not hasattr(self, 'canvas_original_size'):
             self.canvas_original_size = self.canvas.size()
-        output_dir = PATH_INFO.get('output_dir') or self.LE_output_dir_2.text().strip()
-        if not output_dir:
-            QtWidgets.QMessageBox.warning(self.main, "Export", "No output directory selected.")
-            return
+        
+        # 출력 디렉토리 결정 (임시 모드이면 임시 디렉토리 사용)
+        if temp_mode:
+            import tempfile
+            output_dir = tempfile.gettempdir()
+        else:
+            output_dir = PATH_INFO.get('output_dir') or self.LE_output_dir_2.text().strip()
+            if not output_dir:
+                QtWidgets.QMessageBox.warning(self.main, "Export", "No output directory selected.")
+                return None
 
         if not self.canvas:
             QtWidgets.QMessageBox.warning(self.main, "Export", "No contour plot available to export.")
-            return
+            return None
 
         # 저장할 파일 수 계산
         total_files = 1  # 기본 컨투어 플롯
-        if self.PB_export_temp_on.isChecked():
+        if not temp_mode and self.PB_export_temp_on.isChecked():
             total_files += 1
-        if self.PB_export_data_on.isChecked():
+        if not temp_mode and self.PB_export_data_on.isChecked():
             total_files += 1
 
-        # 프로그레스 다이얼로그 생성
-        progress = LoadingDialog(parent=self.main, message="Exporting files...")
-        progress.progress.setMaximum(total_files)
-        progress.progress.setValue(0)
-        progress.show()
-        QtWidgets.QApplication.processEvents()
-
+        # 프로그레스 다이얼로그 준비 (임시 모드에서는 표시 안 함)
+        if not temp_mode:
+            progress = LoadingDialog(parent=self.main, message="Exporting files...")
+            progress.progress.setMaximum(total_files)
+            progress.progress.setValue(0)
+            progress.show()
+            QtWidgets.QApplication.processEvents()
+        
         try:
             # 파일명 기본 정보 설정
             series = PROCESS_STATUS.get('selected_series') or "Series"
@@ -286,8 +316,9 @@ class ContourPlotPage(QtCore.QObject):
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
             # 1. 컨투어 플롯 이미지 저장
-            progress.label.setText("Saving contour plot...")
-            QtWidgets.QApplication.processEvents()
+            if not temp_mode:
+                progress.label.setText("Saving contour plot...")
+                QtWidgets.QApplication.processEvents()
             
             # 현재 크기 저장
             current_size = self.canvas.size()
@@ -302,7 +333,13 @@ class ContourPlotPage(QtCore.QObject):
                 name_parts.append(f"xlim{str(xlim)}")
             if ylim is not None:
                 name_parts.append(f"ylim{str(ylim)}")
-            name_parts.append(timestamp)
+            
+            # 임시 파일인 경우 구분되는 이름 사용
+            if temp_mode:
+                name_parts.append("temp_display")
+            else:
+                name_parts.append(timestamp)
+            
             filename = "_".join(name_parts) + ".png"
             output_path = os.path.join(output_dir, filename)
             
@@ -312,54 +349,64 @@ class ContourPlotPage(QtCore.QObject):
             # 크기 복원 및 다시 그리기
             self.canvas.setFixedSize(self.canvas_original_size)
             self.resize_figure_to_view()
-            progress.progress.setValue(1)
+            
+            if not temp_mode:
+                progress.progress.setValue(1)
 
-            # 2. 온도 데이터 저장
-            if self.PB_export_temp_on.isChecked():
-                progress.label.setText("Saving temperature data...")
-                QtWidgets.QApplication.processEvents()
-                contour_data = DATA.get('contour_data')
-                if contour_data:
-                    times, temperatures = contour_data.get("Time-temp", ([], []))
-                    if times and temperatures:
-                        temp_data = {
-                            'Time': times,
-                            'Temperature': temperatures
-                        }
-                        df_temp = pd.DataFrame(temp_data)
-                        temp_filename = "_".join([series, "temperature", timestamp]) + ".xlsx"
-                        temp_output_path = os.path.join(output_dir, temp_filename)
-                        df_temp.to_excel(temp_output_path, index=False)
-                progress.progress.setValue(2)
+                # 2. 온도 데이터 저장 (임시 모드에서는 건너뜀)
+                if self.PB_export_temp_on.isChecked():
+                    progress.label.setText("Saving temperature data...")
+                    QtWidgets.QApplication.processEvents()
+                    contour_data = DATA.get('contour_data')
+                    if contour_data:
+                        times, temperatures = contour_data.get("Time-temp", ([], []))
+                        if times and temperatures:
+                            temp_data = {
+                                'Time': times,
+                                'Temperature': temperatures
+                            }
+                            df_temp = pd.DataFrame(temp_data)
+                            temp_filename = "_".join([series, "temperature", timestamp]) + ".xlsx"
+                            temp_output_path = os.path.join(output_dir, temp_filename)
+                            df_temp.to_excel(temp_output_path, index=False)
+                    progress.progress.setValue(2)
 
-            # 3. q/Intensity 데이터 저장
-            if self.PB_export_data_on.isChecked():
-                progress.label.setText("Saving intensity data...")
-                QtWidgets.QApplication.processEvents()
-                contour_data = DATA.get('contour_data')
-                if contour_data:
-                    data_entries = contour_data.get("Data", [])
-                    if data_entries:
-                        data_dict = {}
-                        for idx, entry in enumerate(data_entries, 1):
-                            q_key = f"q_{idx}"
-                            intensity_key = f"intensity_{idx}"
-                            data_dict[q_key] = pd.Series(entry.get("q", []))
-                            data_dict[intensity_key] = pd.Series(entry.get("Intensity", []))
-                        
-                        df_all = pd.DataFrame(data_dict)
-                        data_filename = "_".join([series, "raw_data", timestamp]) + ".xlsx"
-                        data_output_path = os.path.join(output_dir, data_filename)
-                        df_all.to_excel(data_output_path, index=False, sheet_name='Raw Data')
-                progress.progress.setValue(3)
+                # 3. q/Intensity 데이터 저장 (임시 모드에서는 건너뜀)
+                if self.PB_export_data_on.isChecked():
+                    progress.label.setText("Saving intensity data...")
+                    QtWidgets.QApplication.processEvents()
+                    contour_data = DATA.get('contour_data')
+                    if contour_data:
+                        data_entries = contour_data.get("Data", [])
+                        if data_entries:
+                            data_dict = {}
+                            for idx, entry in enumerate(data_entries, 1):
+                                q_key = f"q_{idx}"
+                                intensity_key = f"intensity_{idx}"
+                                data_dict[q_key] = pd.Series(entry.get("q", []))
+                                data_dict[intensity_key] = pd.Series(entry.get("Intensity", []))
+                            
+                            df_all = pd.DataFrame(data_dict)
+                            data_filename = "_".join([series, "raw_data", timestamp]) + ".xlsx"
+                            data_output_path = os.path.join(output_dir, data_filename)
+                            df_all.to_excel(data_output_path, index=False, sheet_name='Raw Data')
+                    progress.progress.setValue(3)
 
-            # 모든 작업이 완료되면 성공 메시지 표시 후 다이얼로그 닫기
-            progress.label.setText("Export completed successfully!")
-            QtCore.QTimer.singleShot(1000, progress.close)  # 1초 후 자동으로 닫힘
+                # 모든 작업이 완료되면 성공 메시지 표시 후 다이얼로그 닫기
+                progress.label.setText("Export completed successfully!")
+                QtCore.QTimer.singleShot(1000, progress.close)  # 1초 후 자동으로 닫힘
+            
+            # 임시 모드일 경우 파일 경로 반환
+            if temp_mode:
+                return output_path
+            return None
 
         except Exception as e:
-            progress.close()
-            QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
+            if not temp_mode:
+                progress.close()
+                QtWidgets.QMessageBox.critical(self.main, "Export Error", str(e))
+            return None
+
 
     def open_contour_settings(self):
         """컨투어 설정 다이얼로그 열기"""
