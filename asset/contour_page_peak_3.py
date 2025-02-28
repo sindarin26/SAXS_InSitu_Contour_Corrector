@@ -230,9 +230,31 @@ class DataExportPage(QtCore.QObject):
             table_view.setModel(model)
             
             # Style the table
-            table_view.horizontalHeader().setVisible(False)
-            table_view.verticalHeader().setVisible(False)
+            # 헤더 표시 설정 변경: 숨김에서 표시로 변경
+            table_view.horizontalHeader().setVisible(True)
+            table_view.verticalHeader().setVisible(True)
+            
+            # 엑셀 스타일의 그리드 라인 표시
+            table_view.setShowGrid(True)
+            table_view.setGridStyle(QtCore.Qt.SolidLine)
+            
             table_view.setAlternatingRowColors(True)
+            
+            # 헤더 스타일 설정
+            header_font = QtGui.QFont("Segoe UI", 9, QtGui.QFont.Bold)
+            table_view.horizontalHeader().setFont(header_font)
+            table_view.verticalHeader().setFont(header_font)
+            
+            # 헤더 배경색 설정
+            header_style = """
+                QHeaderView::section {
+                    background-color: #E0E0E0;
+                    padding: 4px;
+                    border: 1px solid #C0C0C0;
+                }
+            """
+            table_view.horizontalHeader().setStyleSheet(header_style)
+            table_view.verticalHeader().setStyleSheet(header_style)
             
             # Auto resize columns to content
             table_view.resizeColumnsToContents()
@@ -415,4 +437,17 @@ class TableModel(QtCore.QAbstractTableModel):
             if index.row() == 11:
                 return QtGui.QColor(220, 220, 220)
         
+        return None
+    
+    def headerData(self, section, orientation, role):
+        if role == QtCore.Qt.DisplayRole:
+            if orientation == QtCore.Qt.Horizontal:
+                # 열 헤더에 A, B, C, ... 표시
+                # 0 → A, 1 → B, ...
+                num_to_char = lambda n: chr(65 + n) if n < 26 else chr(64 + n // 26) + chr(65 + (n % 26))
+                return num_to_char(section)
+            else:
+                # 행 헤더에 1, 2, 3, ... 표시
+                return str(section + 1)
+                
         return None
