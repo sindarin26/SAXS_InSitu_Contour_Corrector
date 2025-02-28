@@ -157,7 +157,7 @@ class DataExportPage(QtCore.QObject):
             header_df.iloc[1, 1] = note
             header_df.iloc[2, 0] = "Fitting Model"
             header_df.iloc[2, 1] = fitting_function
-            header_df.iloc[3, 0] = model_equation
+            header_df.iloc[2, 3] = model_equation
             
             # 파라미터 이름 추가
             header_df.iloc[4, 0] = "Parameters"
@@ -258,6 +258,13 @@ class DataExportPage(QtCore.QObject):
             
             # Auto resize columns to content
             table_view.resizeColumnsToContents()
+            
+            # D열(인덱스 3)부터 모든 열의 최소 너비를 100으로 설정
+            for col in range(3, table_view.model().columnCount()):
+                current_width = table_view.columnWidth(col)
+                # 현재 너비가 100보다 작으면 100으로 설정
+                if current_width < 180:
+                    table_view.setColumnWidth(col, 180)
             
             # Store reference to table view
             self.table_views[sheet_name] = table_view
