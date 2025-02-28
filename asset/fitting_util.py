@@ -1,10 +1,11 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from asset.contour_storage import FITTING_THRESHOLD
+from asset.contour_storage import FITTING_THRESHOLD, PLOT_OPTIONS
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from asset.contour_util import interpolate_contour_data
+
     
 
 def gaussian(x, a, mu, sigma, offset):
@@ -657,6 +658,7 @@ def plot_contour_extraction(
         "contour_upper_percentile": 98,
         "contour_xlim": None,
         "global_ylim": None,
+        "font_tick": "Times New Roman",  # Default font_tick
     }
     if graph_option is None:
         graph_option = {}
@@ -710,6 +712,15 @@ def plot_contour_extraction(
     if final_opt["global_ylim"] is not None:
         ax.set_ylim(final_opt["global_ylim"])
 
+    # 폰트 설정 추가
+    font_tick = final_opt.get("font_tick", "Times New Roman")
+    plt.rcParams['font.family'] = font_tick
+    
+    # 축 및 제목 폰트 설정
+    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+                ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontname(font_tick)
+
     # 6) found_peak_list에 포함된 peak_name별로 산점도+라인 그리기
     data_by_peak = {}
     for entry in tracked_peaks.get("Data", []):
@@ -739,7 +750,7 @@ def plot_contour_extraction(
             s=40,
             picker=5 if flag_adjust_mode else False
         )
-        ax.plot(q_vals, t_vals, color=color, alpha=0.7, linewidth=1)
+        ax.plot(q_vals, t_vals, color=color, alpha=0.7, linewidth=2)
         scatter_dict[pname] = sc  # 콜백에서 식별하기 위해 저장
 
     # 7) 클릭 이벤트 (flag_adjust_mode=True)
