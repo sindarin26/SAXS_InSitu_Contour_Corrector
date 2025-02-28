@@ -5,7 +5,7 @@ class SDDSettingsPage(QtCore.QObject):
     # 라벨 업데이트 매핑: 항상 PARAMS 기준으로 업데이트됨
     LABEL_MAPPINGS = {
         'L_sdd': ('original_sdd', '.4f', 'mm'),
-        'L_pixel_size': ('pixel_size', '.4f', 'pixel/mm'),
+        'L_pixel_size': ('pixel_size', '.4f', 'pixel'),
         'L_image_size_x': ('image_size_x', '', 'px'),
         'L_image_size_y': ('image_size_y', '', 'px'),
         'L_experiment_energy': ('experiment_energy', '.2f', 'keV'),
@@ -186,6 +186,12 @@ class SDDSettingsPage(QtCore.QObject):
         for label_name, (param_name, format_spec, unit) in self.LABEL_MAPPINGS.items():
             label = getattr(self.ui, label_name)
             value = PARAMS[param_name]
+            
+            # converted_energy가 0인 경우 "None"으로 표시
+            if param_name == 'converted_energy' and value == 0:
+                label.setText("None")
+                continue
+            
             text = f"{value:{format_spec}}" if format_spec else str(value)
             if unit:
                 text += f" {unit}"
