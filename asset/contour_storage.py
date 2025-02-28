@@ -53,8 +53,8 @@ PLOT_OPTIONS = {
     'legend': False,
     'graph_option': {
         # Figure 설정
-        "figure_size": (12, 8),
-        "figure_dpi": 200,
+        "figure_size": (8, 5),
+        "figure_dpi": 300,
         
         # 타이틀 관련 (True/False 바로 아래에 텍스트 배치)
         "figure_title_enable": False,
