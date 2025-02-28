@@ -324,7 +324,8 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
         "contour_lower_percentile": PLOT_OPTIONS["graph_option"]["contour_lower_percentile"],
         "contour_upper_percentile": PLOT_OPTIONS["graph_option"]["contour_upper_percentile"],
         "global_ylim": PLOT_OPTIONS["graph_option"]["global_ylim"],
-        "contour_xlim": PLOT_OPTIONS["graph_option"]["contour_xlim"]
+        "contour_xlim": PLOT_OPTIONS["graph_option"]["contour_xlim"],
+        "font_tick": PLOT_OPTIONS["graph_option"]["font_tick"],
     }
     
     if graph_option is None:
@@ -370,8 +371,11 @@ def plot_contour_with_peaks_gui(contour_data, tracked_peaks, graph_option=None):
         ax.set_ylim(final_opt["global_ylim"])
     
     # Set labels and title
-    ax.set_title("Contour Plot with Peak Positions", fontsize=16, fontweight='bold')
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+    
+    # Set tick font
+    plt.xticks(fontname=final_opt["font_tick"])
+    plt.yticks(fontname=final_opt["font_tick"])
     
     # Plot peaks as a line
     peak_data = []
