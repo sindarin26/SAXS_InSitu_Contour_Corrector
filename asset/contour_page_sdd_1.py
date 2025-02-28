@@ -264,14 +264,30 @@ class SDDPeakTrackingPage(QtCore.QObject):
             fitting_model = PARAMS.get('fitting_model', 'gaussian')
             
             while self.current_index <= self.max_index:
+                # 이전 프레임의 피크 정보 가져오기
+                prev_peak_info = None
+                
+                # 직전 프레임 찾기
+                for entry in reversed(self.tracked_peaks["Data"]):
+                    if entry.get("frame_index") == self.current_index - 1:
+                        prev_peak_info = {
+                            "peak_q": entry.get("peak_q"),
+                            "peak_intensity": entry.get("peak_Intensity"),
+                            "fwhm": entry.get("fwhm"),
+                            "peak_name": f"peak_{entry.get('frame_index')}_{entry.get('peak_q'):.4f}"
+                        }
+                        break
+                
+                # 직전 프레임의 피크 정보를 전달
                 result = find_peak(
                     self.contour_data, 
                     Index_number=self.current_index, 
                     input_range=self.global_q_range,
-                    peak_info=None,
+                    peak_info=prev_peak_info,  # 이전 프레임 정보 전달
                     fitting_function=fitting_model,
                     threshold_config=FITTING_THRESHOLD
                 )
+
                 
                 if isinstance(result, str):
                     self.peak_found = False
