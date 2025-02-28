@@ -276,57 +276,73 @@ class DataExportPage(QtCore.QObject):
             self.TW_table.addTab(tab, sheet_name)
     
     def export_data(self):
-        """Export table data to Excel file"""
-        if not self.table_data:
-            QtWidgets.QMessageBox.warning(
-                self.main,
-                "Warning",
-                "No data available to export."
-            )
-            return
-        
-        # Get series name
-        series_name = self.main.PEAK_EXTRACT_DATA.get('tracked_peaks', {}).get('Series', "Unknown")
-        
-        # Create timestamp
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Create filename
-        filename = f"{series_name}_extracted_peaks_{timestamp}.xlsx"
-        
-        # Get output directory
-        output_dir = self.get_output_directory()
-        if not output_dir:
-            return
-        
-        # Create full path
-        file_path = os.path.join(output_dir, filename)
-        
-        # Show loading dialog
-        loading = LoadingDialog(self.main, "Exporting data to Excel...")
-        loading.show()
-        QtWidgets.QApplication.processEvents()
-        
-        try:
-            # Create Excel writer
-            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-                # Write each sheet
-                for sheet_name, df in self.table_data.items():
-                    df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+            """Export table data to Excel file"""
+            if not self.table_data:
+                QtWidgets.QMessageBox.warning(
+                    self.main,
+                    "Warning",
+                    "No data available to export."
+                )
+                return
             
-            QtWidgets.QMessageBox.information(
-                self.main,
-                "Success",
-                f"Data exported successfully to:\n{file_path}"
-            )
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(
-                self.main,
-                "Error",
-                f"Failed to export data: {str(e)}"
-            )
-        finally:
-            loading.close()
+            # Get series name
+            series_name = self.main.PEAK_EXTRACT_DATA.get('tracked_peaks', {}).get('Series', "Unknown")
+            
+            # Create timestamp
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Create filename
+            filename = f"{series_name}_extracted_peaks_{timestamp}.xlsx"
+            
+            # Get output directory
+            output_dir = self.get_output_directory()
+            if not output_dir:
+                return
+            
+            # Create full path
+            file_path = os.path.join(output_dir, filename)
+            
+            # Show loading dialog
+            loading = LoadingDialog(self.main, "Exporting data to Excel...")
+            loading.show()
+            QtWidgets.QApplication.processEvents()
+            
+            try:
+                # Create Excel writer
+                with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+                    # Write each sheet
+                    for sheet_name, df in self.table_data.items():
+                        df.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+                
+                # 성공 메시지 다이얼로그에 Segoe UI 9포인트 폰트 적용
+                msg_box = QtWidgets.QMessageBox(self.main)
+                msg_box.setIcon(QtWidgets.QMessageBox.Information)
+                msg_box.setWindowTitle("Success")
+                msg_box.setText(f"Data exported successfully to:\n{file_path}")
+                msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+                
+                # 폰트 설정
+                font = QtGui.QFont("Segoe UI", 9)
+                msg_box.setFont(font)
+                
+                # 다이얼로그 표시
+                msg_box.exec_()
+            except Exception as e:
+                # 에러 메시지도 같은 폰트 적용
+                msg_box = QtWidgets.QMessageBox(self.main)
+                msg_box.setIcon(QtWidgets.QMessageBox.Critical)
+                msg_box.setWindowTitle("Error")
+                msg_box.setText(f"Failed to export data: {str(e)}")
+                msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+                
+                # 폰트 설정
+                font = QtGui.QFont("Segoe UI", 9)
+                msg_box.setFont(font)
+                
+                # 다이얼로그 표시
+                msg_box.exec_()
+            finally:
+                loading.close()
     
     def get_output_directory(self):
         """Get output directory from parent application"""
