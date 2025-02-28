@@ -165,7 +165,9 @@ class DataExportPage(QtCore.QObject):
                 header_df.iloc[4, i+1] = param
             
             # 데이터 헤더와 데이터를 위한 빈 DataFrame 생성
-            data_headers = ["Elapsed Time", "Temperature", "Index", "peak_q", "peak_Intensity", "FWHM"]
+            # 추가: Raw 피크 데이터 헤더 포함
+            data_headers = ["Elapsed Time", "Temperature", "Index", "peak_q", "peak_Intensity", 
+                        "peak_q_max_raw", "peak_intensity_max_raw", "FWHM"]
             data_headers.extend(model_params)
             
             # 데이터 추출
@@ -174,6 +176,9 @@ class DataExportPage(QtCore.QObject):
             indices = [int(entry.get('frame_index', 0)) for entry in entries]
             peak_qs = [entry.get('peak_q', 0) for entry in entries]
             intensities = [entry.get('peak_Intensity', 0) for entry in entries]
+            # 추가: Raw 피크 데이터 추출
+            peak_qs_raw = [entry.get('peak_q_max_raw', 0) for entry in entries]
+            intensities_raw = [entry.get('peak_intensity_max_raw', 0) for entry in entries]
             fwhms = [entry.get('fwhm', 0) for entry in entries]
             
             # 수정된 부분: 명시적으로 열 이름을 알파벳으로 지정
@@ -190,6 +195,8 @@ class DataExportPage(QtCore.QObject):
                     indices[i],
                     peak_qs[i],
                     intensities[i],
+                    peak_qs_raw[i],         # 추가: raw q 값
+                    intensities_raw[i],     # 추가: raw intensity 값 
                     fwhms[i]
                 ]
                 

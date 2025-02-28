@@ -327,12 +327,13 @@ class PeakTrackingPage(QtCore.QObject):
             return
         
         # Unpack successful result
-        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw = result
         
         print(f"Found peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
+        print(f"Raw peak: q={peak_q_max_raw}, intensity={peak_intensity_max_raw}")
         
         # Get current entry before using it
-        current_entry = self.contour_data['Data'][self.current_index]
+        current_entry = self.contour_data["Data"][self.current_index]
 
         current_time = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][0][self.current_index]
         current_temp = self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Time-temp'][1][self.current_index]
@@ -352,6 +353,8 @@ class PeakTrackingPage(QtCore.QObject):
                     "Temperature": current_temp,
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
+                    "peak_q_max_raw": peak_q_max_raw,
+                    "peak_intensity_max_raw": peak_intensity_max_raw,
                     "fwhm": fwhm,
                     "peak_name": peak_name,
                     "output_range": output_range,
@@ -369,6 +372,8 @@ class PeakTrackingPage(QtCore.QObject):
                 "Temperature": current_temp,
                 "peak_q": peak_q,
                 "peak_Intensity": peak_intensity,
+                "peak_q_max_raw": peak_q_max_raw,
+                "peak_intensity_max_raw": peak_intensity_max_raw,
                 "fwhm": fwhm,
                 "peak_name": peak_name,
                 "output_range": output_range,
@@ -452,7 +457,7 @@ class PeakTrackingPage(QtCore.QObject):
             return
         
         # Unpack successful result
-        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw = result
         
         print(f"Adjusted peak: {peak_name} at q={peak_q}, intensity={peak_intensity}")
 
@@ -474,6 +479,8 @@ class PeakTrackingPage(QtCore.QObject):
                     "Temperature": current_temp,
                     "peak_q": peak_q,
                     "peak_Intensity": peak_intensity,
+                    "peak_q_max_raw": peak_q_max_raw,
+                    "peak_intensity_max_raw": peak_intensity_max_raw,
                     "fwhm": fwhm,
                     "peak_name": peak_name,
                     "output_range": output_range,
@@ -492,6 +499,8 @@ class PeakTrackingPage(QtCore.QObject):
                 "Temperature": current_temp,
                 "peak_q": peak_q,
                 "peak_Intensity": peak_intensity,
+                    "peak_q_max_raw": peak_q_max_raw,
+                    "peak_intensity_max_raw": peak_intensity_max_raw,
                 "fwhm": fwhm,
                 "peak_name": peak_name,
                 "output_range": output_range,

@@ -320,13 +320,17 @@ def find_peak_extraction(
 
     Returns
     -------
-    (peak_q, peak_intensity, output_range, fwhm, peak_name) or str
+    (peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw) or str
         성공 시: 튜플
-            - peak_q : float
-            - peak_intensity : float
+            - peak_q : float (fitted peak의 q 값)
+            - peak_intensity : float (fitted peak의 intensity 값)
             - output_range : (float, float)
             - fwhm : float
             - peak_name : str (피크 그룹 이름)
+            - fitting_function : str (사용된 피팅 함수 이름)
+            - fitting_params : dict (피팅 파라미터)
+            - peak_q_max_raw : float (q range 내 실제 데이터의 최대 intensity q 위치)
+            - peak_intensity_max_raw : float (q range 내 실제 데이터의 최대 intensity 값)
         실패 시: 문자열(에러 메시지)
     """
 
@@ -363,6 +367,11 @@ def find_peak_extraction(
 
     q_subset = q_arr[mask]
     intensity_subset = intensity_arr[mask]
+
+    # 4-1) 추가: q range 내에서 실제 데이터의 최대 intensity 값과 해당 q 값 찾기
+    max_intensity_idx = np.argmax(intensity_subset)
+    peak_q_max_raw = q_subset[max_intensity_idx]
+    peak_intensity_max_raw = intensity_subset[max_intensity_idx]
 
     # 5) 피팅 함수 선택 및 초기 추정값 설정
     if fitting_function.lower() == "lorentzian":
@@ -496,8 +505,7 @@ def find_peak_extraction(
         print(f"DEBUG: Manual mode - using input range as-is: {output_range}")
 
 
-    return peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params
-
+    return peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw
 
 def run_automatic_tracking(
     contour_data: dict,
@@ -564,7 +572,7 @@ def run_automatic_tracking(
                 on_error_callback(f"Peak not found at frame {current_index}: {result}")
             break
 
-        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw = result
 
         current_entry = contour_data["Data"][current_index]
 
@@ -573,13 +581,15 @@ def run_automatic_tracking(
 
         print(f"DEBUG: Current time and temp = {current_time}, {current_temp}")
 
-
+        # 추가된 원시 피크 데이터 포함
         new_result = {
             "frame_index": current_index,
             "Time": current_time,
             "Temperature": current_temp,
             "peak_q": peak_q,
             "peak_Intensity": peak_intensity,
+            "peak_q_max_raw": peak_q_max_raw,
+            "peak_intensity_max_raw": peak_intensity_max_raw,
             "fwhm": fwhm,
             "peak_name": peak_name,
             "output_range": output_range,
@@ -588,9 +598,12 @@ def run_automatic_tracking(
         }
         tracked_peaks["Data"].append(new_result)
 
+        # 마지막 피크 정보 업데이트
         last_peak_info = {
             "peak_q": peak_q,
             "peak_intensity": peak_intensity,
+            "peak_q_max_raw": peak_q_max_raw,
+            "peak_intensity_max_raw": peak_intensity_max_raw,
             "fwhm": fwhm,
             "peak_name": peak_name,
             "output_range": output_range,
