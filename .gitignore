@@ -1,3 +1,6 @@
 ready/test_output/*
 ready/__pycache__/*
 */__pycache__/*
+.DS_Store
+asset/.DS_Store
+ready/.DS_Store
