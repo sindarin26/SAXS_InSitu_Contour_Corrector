@@ -18,7 +18,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         self.temp_options = {}
         
         # 폰트 설정
-        font = QtGui.QFont("Segoe UI", 9)
+        font = QtGui.QFont("Segoe UI", 12)
         self.setFont(font)
         
         # 메인 레이아웃에 스크롤 영역 추가 (옵션이 많을 경우 대비)
@@ -48,7 +48,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         self.temp_options = copy.deepcopy(PLOT_OPTIONS['graph_option'])
         
         # 창 크기 설정
-        self.resize(600, 700)
+        self.resize(800, 1200)
 
     def build_fields(self):
         """
@@ -106,7 +106,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         grid_layout.setSpacing(10)
         
         # 그룹박스 제목 폰트 설정 - Bold에서 일반으로 변경
-        title_font = QtGui.QFont("Segoe UI", 9)  # Bold 제거
+        title_font = QtGui.QFont("Segoe UI", 12)  # Bold 제거
         group_box.setFont(title_font)
         
         # 옵션 배치 (2열로 배치)
@@ -138,7 +138,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 옵션명을 읽기 쉽게 표시
         display_name = key.replace("_", " ").title()
         label = QtWidgets.QLabel(display_name)
-        label.setFont(QtGui.QFont("Segoe UI", 9))
+        label.setFont(QtGui.QFont("Segoe UI", 12))
         layout.addWidget(label)
         
         # xlim, ylim은 별도의 두 입력창으로 분리 (하나라도 빈칸이면 auto)
@@ -149,11 +149,11 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             # min 입력창
             le_min = QtWidgets.QLineEdit()
             le_min.setMaximumWidth(50)
-            le_min.setFont(QtGui.QFont("Segoe UI", 9))
+            le_min.setFont(QtGui.QFont("Segoe UI", 12))
             # max 입력창
             le_max = QtWidgets.QLineEdit()
             le_max.setMaximumWidth(50)
-            le_max.setFont(QtGui.QFont("Segoe UI", 9))
+            le_max.setFont(QtGui.QFont("Segoe UI", 12))
             
             if isinstance(value, (tuple, list)) and len(value) == 2:
                 min_val, max_val = value
@@ -183,7 +183,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 폰트 옵션: key가 "font_"로 시작하면 FontComboBox 사용
         elif key.startswith("font_"):
             input_widget = QtWidgets.QFontComboBox()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             # 일반적으로 사용되는 폰트만 표시
             input_widget.setFontFilters(QtWidgets.QFontComboBox.ScalableFonts)
             
@@ -211,7 +211,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 불리언 값인 경우
         elif isinstance(value, bool):
             input_widget = QtWidgets.QComboBox()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.addItems(["True", "False"])
             input_widget.setCurrentText(str(value))
             input_widget.currentIndexChanged.connect(
@@ -222,7 +222,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 컬러맵 옵션: "contour_cmap"는 미리 정의된 인기 컬러맵 목록을 콤보박스로 표시
         elif key == "contour_cmap":
             input_widget = QtWidgets.QComboBox()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             colormaps = ["inferno", "viridis", "plasma", "magma", "jet", "hot", "cool", "rainbow"]
             input_widget.addItems(colormaps)
             current_val = value if value in colormaps else "inferno"
@@ -242,7 +242,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
             edits = []
             for item in value:
                 le = QtWidgets.QLineEdit()
-                le.setFont(QtGui.QFont("Segoe UI", 9))
+                le.setFont(QtGui.QFont("Segoe UI", 12))
                 le.setMaximumWidth(50)
                 le.setText(str(item))
                 hlayout.addWidget(le)
@@ -258,7 +258,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 숫자(int, float)나 None (빈칸이면 None 적용)
         elif isinstance(value, (int, float)) or value is None:
             input_widget = QtWidgets.QLineEdit()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             if value is not None:
                 input_widget.setText(str(value))
             input_widget.editingFinished.connect(
@@ -269,7 +269,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         # 문자열 (일반 텍스트, _text 항목 등)
         elif isinstance(value, str):
             input_widget = QtWidgets.QLineEdit()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.setText(value)
             input_widget.editingFinished.connect(
                 lambda k=key, pk=parent_key, w=input_widget: 
@@ -279,7 +279,7 @@ class ContourSettingsDialog(QtWidgets.QDialog):
         else:
             # 기본 처리: QLineEdit로 문자열 변환
             input_widget = QtWidgets.QLineEdit()
-            input_widget.setFont(QtGui.QFont("Segoe UI", 9))
+            input_widget.setFont(QtGui.QFont("Segoe UI", 12))
             input_widget.setText(str(value))
             input_widget.editingFinished.connect(
                 lambda k=key, pk=parent_key, w=input_widget: 
@@ -366,20 +366,13 @@ class ContourSettingsDialog(QtWidgets.QDialog):
 
     def apply_all_changes(self):
         """모든 변경사항을 적용하고 콜백 호출"""
-        loading = LoadingDialog(self, "Applying settings and updating plot...")
-        loading.show()
-        QtWidgets.QApplication.processEvents()
-        
-        try:
-            # 임시 저장된 변경사항을 PLOT_OPTIONS에 적용
-            for key, value in self.temp_options.items():
-                PLOT_OPTIONS['graph_option'][key] = value
-                
-            # 콜백 호출 (플롯 업데이트)
-            if self.callback:
-                self.callback()
-        finally:
-            loading.close()
+        # 임시 저장된 변경사항을 PLOT_OPTIONS에 적용
+        for key, value in self.temp_options.items():
+            PLOT_OPTIONS['graph_option'][key] = value
+            
+        # 콜백 호출 (플롯 업데이트)
+        if self.callback:
+            self.callback()
 
     def keyPressEvent(self, event):
         """Enter 키를 누르면 변경사항 적용"""

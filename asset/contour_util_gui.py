@@ -8,6 +8,7 @@ import numpy as np
 from asset.contour_storage import PLOT_OPTIONS
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from asset.contour_util import interpolate_contour_data
+from PyQt5 import QtGui
 
 class DraggableLine(pg.InfiniteLine):
     """Draggable vertical line with label"""
@@ -38,6 +39,16 @@ class TempCorrectionHelper:
         self.adjust_lines = []
         self.temp_data = None
         self.selection_mode = "steady"
+        
+        # 플롯 위젯의 폰트 설정
+        font = QtGui.QFont("Segoe UI", 9)
+        self.plot_widget.getAxis('bottom').setTickFont(font)
+        self.plot_widget.getAxis('left').setTickFont(font)
+        
+        # 축 레이블 폰트 설정
+        label_style = {'color': '#000', 'font-size': '9pt', 'font-family': 'Segoe UI'}
+        self.plot_widget.getAxis('bottom').setLabel('Index', **label_style)
+        self.plot_widget.getAxis('left').setLabel('Temperature', **label_style)
         
     def set_data(self, temp_data):
         """Set temperature data"""
@@ -83,6 +94,9 @@ class TempCorrectionHelper:
         y_offset = (np.max(self.temp_data) - np.min(self.temp_data)) * 0.1
         label_ypos = np.max(self.temp_data) + y_offset
 
+        # 폰트 설정
+        font = QtGui.QFont("Segoe UI", 9)
+
         if self.selection_mode == "steady":
             pos1, pos2 = len(indices)//4, len(indices)*3//4
 
@@ -95,7 +109,9 @@ class TempCorrectionHelper:
 
             # 라벨 생성 (초기 텍스트: "Start\n(인덱스, 온도°C)")
             label1 = pg.TextItem(color=(0, 0, 0))
+            label1.setFont(font)
             label2 = pg.TextItem(color=(0, 0, 0))
+            label2.setFont(font)
 
             # 우선 임시 위치에 라벨 배치
             label1.setPos(pos1, label_ypos)
@@ -130,9 +146,10 @@ class TempCorrectionHelper:
             line1.setPen(pg.mkPen(color='r', width=1.5))
             line2.setPen(pg.mkPen(color='r', width=1.5))
 
-
             label1 = pg.TextItem(color=(0, 0, 0))
+            label1.setFont(font)
             label2 = pg.TextItem(color=(0, 0, 0))
+            label2.setFont(font)
 
             label1.setPos(pos1, label_ypos)
             label2.setPos(pos2, label_ypos)
@@ -798,8 +815,17 @@ def create_plot_widget():
     """Create a preconfigured plot widget"""
     plot = pg.PlotWidget()
     plot.setBackground('w')
-    plot.setLabel('left', 'Temperature')
-    plot.setLabel('bottom', 'Index')
+    
+    # 폰트 설정
+    font = QtGui.QFont("Segoe UI", 9)
+    plot.getAxis('bottom').setTickFont(font)
+    plot.getAxis('left').setTickFont(font)
+    
+    # 축 라벨 폰트 설정
+    label_style = {'color': '#000', 'font-size': '9pt', 'font-family': 'Segoe UI'}
+    plot.setLabel('left', 'Temperature', **label_style)
+    plot.setLabel('bottom', 'Index', **label_style)
+    
     plot.showGrid(x=True, y=True)
     plot.getAxis('bottom').setPen('k')
     plot.getAxis('left').setPen('k')

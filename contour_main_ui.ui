@@ -20,6 +20,7 @@
       <property name="font">
        <font>
         <family>Segoe UI</family>
+        <pointsize>12</pointsize>
        </font>
       </property>
       <property name="currentIndex">
@@ -32,6 +33,7 @@
           <property name="font">
            <font>
             <family>Segoe UI</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="frameShape">
@@ -46,6 +48,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -60,6 +63,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -72,6 +76,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -84,6 +89,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -96,6 +102,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -111,6 +118,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -125,6 +133,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -137,6 +146,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -149,6 +159,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -161,6 +172,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -176,6 +188,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -190,6 +203,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -202,6 +216,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                </widget>
@@ -211,6 +226,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -223,6 +239,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -241,6 +258,7 @@
           <property name="font">
            <font>
             <family>Segoe UI</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="frameShape">
@@ -255,6 +273,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -269,6 +288,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -281,6 +301,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                </widget>
@@ -296,6 +317,7 @@
           <property name="font">
            <font>
             <family>Segoe UI</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="frameShape">
@@ -322,6 +344,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -336,6 +359,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -348,6 +372,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -363,6 +388,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -384,6 +410,7 @@
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>12</pointsize>
               </font>
              </property>
              <property name="frameShape">
@@ -404,6 +431,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -416,6 +444,7 @@
                 <property name="font">
                  <font>
                   <family>Segoe UI</family>
+                  <pointsize>12</pointsize>
                  </font>
                 </property>
                 <property name="text">
@@ -436,12 +465,24 @@
         <item>
          <widget class="QFrame" name="frame_13">
           <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_12">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QComboBox" name="CB_series"/>
            </item>
@@ -469,16 +510,28 @@
               <item>
                <widget class="QFrame" name="frame_22">
                 <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
+                 <enum>QFrame::NoFrame</enum>
                 </property>
                 <property name="frameShadow">
                  <enum>QFrame::Raised</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_20">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QFrame" name="frame_23">
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
@@ -487,7 +540,7 @@
                     <item>
                      <widget class="QLabel" name="label_13">
                       <property name="text">
-                       <string>Temperature Signal Out Correction</string>
+                       <string>Temperature Signal Disconnect Correction</string>
                       </property>
                      </widget>
                     </item>
@@ -497,12 +550,24 @@
                  <item>
                   <widget class="QFrame" name="frame_24">
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_19">
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
                     <item>
                      <widget class="QPushButton" name="PB_reset_temp">
                       <property name="text">
@@ -522,21 +587,45 @@
               <item>
                <widget class="QFrame" name="frame_17">
                 <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
+                 <enum>QFrame::NoFrame</enum>
                 </property>
                 <property name="frameShadow">
                  <enum>QFrame::Raised</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_18">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QFrame" name="frame_19">
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_15">
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
                     <item>
                      <widget class="QPushButton" name="PB_reset_adjust_temp">
                       <property name="text">
@@ -592,21 +681,45 @@
               <item>
                <widget class="QFrame" name="frame_26">
                 <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
+                 <enum>QFrame::NoFrame</enum>
                 </property>
                 <property name="frameShadow">
                  <enum>QFrame::Raised</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_21">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QFrame" name="frame_30">
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_25">
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
                     <item>
                      <widget class="QPushButton" name="PB_apply_corrected_temp">
                       <property name="text">
@@ -1015,12 +1128,24 @@
         <item>
          <widget class="QFrame" name="frame_34">
           <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_30" stretch="1,1">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QFrame" name="frame_36">
              <property name="frameShape">
@@ -1046,8 +1171,14 @@
               </item>
               <item>
                <widget class="QPushButton" name="PB_open_output_folder">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Open Output Folder</string>
+                 <string>  Open Output Folder  </string>
                 </property>
                </widget>
               </item>
