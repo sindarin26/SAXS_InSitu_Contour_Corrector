@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets, QtCore
 import numpy as np
 from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS, PATH_INFO
 from asset.contour_util_gui import IndexRangeSelectionHelper, PeakTempRangeHelper
-from asset.contour_util import (plot_contour, fit_peak_vs_temp, calculate_corrected_sdd)
+from asset.contour_util import fit_peak_vs_temp, calculate_corrected_sdd
 from asset.contour_util import theta_to_q, q_to_2theta, calculate_corrected_sdd
 import pyqtgraph as pg
 import traceback
