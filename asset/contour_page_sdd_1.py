@@ -25,6 +25,12 @@ class SDDPeakTrackingPage(QtCore.QObject):
 
         # 현재 프레임의 피크 검출 성공 여부
         self.peak_found = None
+        
+        # 자동 추적 중인지 표시하는 플래그
+        self.is_auto_tracking = False
+        
+        # 0번 인덱스 페이지에서 처음 시작했는지 표시하는 플래그
+        self.started_from_index_0 = True
 
         # 1번 페이지용 QRangeCorrectionHelper
         self.q_correction_helper = None
@@ -50,7 +56,14 @@ class SDDPeakTrackingPage(QtCore.QObject):
         self.ui.PB_apply_qrange.clicked.connect(self.apply_q_range)
         self.ui.PB_next.clicked.connect(self.retry_current_frame)
         self.ui.PB_sdd_correction_start.clicked.connect(self.finalize_peak_tracking)
+        
+        # 뒤로가기 버튼 초기 상태 설정
+        self.update_back_button_state()
 
+    def update_back_button_state(self):
+        """뒤로가기 버튼 상태 업데이트"""
+        self.ui.PB_back_0.setEnabled(self.started_from_index_0)
+        
     def initialize_peak_tracking(self, contour_data):
         """피크 추적 프로세스 초기화 (인덱스 0부터 시작)"""
         self.contour_data = contour_data
@@ -66,6 +79,12 @@ class SDDPeakTrackingPage(QtCore.QObject):
         self.highlight_marker_v = None
         self.highlight_marker_h = None
         self.in_adjustment_mode = False
+        self.is_auto_tracking = False
+        
+        # 페이지 0에서 시작한 것으로 설정
+        self.started_from_index_0 = True
+        self.update_back_button_state()
+        
         self.main.ui.stackedWidget.setCurrentIndex(1)
         self.setup_q_range_selection()
 
@@ -76,6 +95,11 @@ class SDDPeakTrackingPage(QtCore.QObject):
         Parameters:
             mode (str): 'auto_tracking_error' 또는 'manual_adjust' - 어떤 모드에서 호출되었는지 표시
         """
+        if mode == "auto_tracking_error" or mode == "manual_adjust":
+            # 페이지 2에서 왔으므로 뒤로가기 버튼 비활성화
+            self.started_from_index_0 = False
+            self.update_back_button_state()
+        
         if not self.contour_data or self.current_index >= len(self.contour_data['Data']):
             QtWidgets.QMessageBox.warning(self.main, "Error", "Current frame index is out of range.")
             return
@@ -228,11 +252,15 @@ class SDDPeakTrackingPage(QtCore.QObject):
                     "fwhm": fwhm
                 })
                 self.current_index += 1
+                
+                # 자동 추적 시작 전에 플래그 설정
+                self.is_auto_tracking = True
                 self.run_automatic_tracking()
 
     def run_automatic_tracking(self):
         """Automatic peak tracking with selected fitting model"""
         try:
+            self.is_auto_tracking = True  # 자동 추적 시작
             fitting_model = PARAMS.get('fitting_model', 'gaussian')
             
             while self.current_index <= self.max_index:
@@ -267,9 +295,12 @@ class SDDPeakTrackingPage(QtCore.QObject):
                     
             if self.current_index > self.max_index:
                 self.ui.L_current_status_2.setText("Peak find Completed")
+            
+            self.is_auto_tracking = False  # 자동 추적 종료
             self.show_contour_page()
             
         except Exception as e:
+            self.is_auto_tracking = False  # 에러 발생 시에도 자동 추적 상태 해제
             QtWidgets.QMessageBox.critical(
                 self.main,
                 "Error",
@@ -296,7 +327,7 @@ class SDDPeakTrackingPage(QtCore.QObject):
             
             self.adjust_canvas = canvas
             self.setup_adjust_interaction()
-
+            
             # -----------------------------------------------------
             # ★ 핵심: 찾은 피크 개수 vs 전체 프레임 수 확인
             # -----------------------------------------------------
@@ -336,6 +367,10 @@ class SDDPeakTrackingPage(QtCore.QObject):
                 self.ui.PB_sdd_correction_start.setEnabled(False)
 
             self.main.ui.stackedWidget.setCurrentIndex(2)
+            
+            # 뒤로가기 버튼 상태 업데이트 (페이지 2로 이동했으므로 항상 비활성화)
+            self.started_from_index_0 = False
+            self.update_back_button_state()
 
     def setup_adjust_interaction(self):
         """
@@ -361,6 +396,10 @@ class SDDPeakTrackingPage(QtCore.QObject):
             self.highlight_marker_h = None
 
         def on_click(event):
+            # 자동 추적 중일 때는 피크 선택 비활성화
+            if self.is_auto_tracking:
+                return
+                
             if event.inaxes != ax:
                 return
             min_dist = float('inf')
