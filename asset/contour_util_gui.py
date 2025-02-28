@@ -494,7 +494,7 @@ class QRangeCorrectionHelper:
         
         # initial_range가 설정되어 있으면 해당 범위 기준으로, 아니면 기본값
         min_q, max_q = np.min(self.q_data), np.max(self.q_data)
-        if self.initial_range:
+        if (self.initial_range):
             range_min, range_max = self.initial_range
             pos1, pos2 = range_min, range_max
         else:
@@ -684,6 +684,10 @@ class IndexRangeSelectionHelper:
             symbolPen=pg.mkPen('k'),
             symbolBrush=pg.mkBrush('w')
         )
+
+        font = QtGui.QFont("Segoe UI", 9)
+        self.plot_widget.getAxis('bottom').setTickFont(font)
+        self.plot_widget.getAxis('left').setTickFont(font)
         
     def add_selection_lines(self):
         """Add vertical lines for selection"""
@@ -756,6 +760,10 @@ class IndexRangeSelectionHelper:
         line.label.setText(f"{prefix}\n(Index: {idx}, {temp_val:.2f}°C)")
         line.label.setPos(x_pos, fixed_y)
         
+        # 폰트 설정 추가
+        font = QtGui.QFont("Segoe UI", 9)
+        line.label.setFont(font)
+        
     def get_index_range(self):
         """Return selected index range"""
         if len(self.index_lines) == 2:
@@ -793,6 +801,10 @@ class PeakTempRangeHelper:
             symbolPen=pg.mkPen('k'),
             symbolBrush=pg.mkBrush('w')
         )
+
+        font = QtGui.QFont("Segoe UI", 9)
+        self.plot_widget.getAxis('bottom').setTickFont(font)
+        self.plot_widget.getAxis('left').setTickFont(font)
         
     def add_selection_lines(self):
         """Add vertical lines for temperature range selection"""
@@ -854,6 +866,10 @@ class PeakTempRangeHelper:
         x_pos = line.value()
         line.label.setText(f"{prefix}\nTemp: {x_pos:.2f}°C")
         line.label.setPos(x_pos, fixed_y)
+        
+        # 폰트 설정 추가
+        font = QtGui.QFont("Segoe UI", 9)
+        line.label.setFont(font)
         
     def get_temp_range(self):
         """Return selected temperature range"""
