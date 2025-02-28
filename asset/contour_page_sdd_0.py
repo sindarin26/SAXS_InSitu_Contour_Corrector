@@ -99,7 +99,8 @@ class SDDSettingsPage(QtCore.QObject):
                 checkbox.isChecked(),
                 lineedit,
                 label,
-                FITTING_THRESHOLD[value_key]
+                FITTING_THRESHOLD[value_key],
+                param_key
             )
 
     def connect_signals(self):
@@ -135,28 +136,71 @@ class SDDSettingsPage(QtCore.QObject):
 
             # Connect checkbox state change
             checkbox.stateChanged.connect(
-                lambda state, le=lineedit, lb=label, vk=value_key:
-                self.update_threshold_state(
-                    bool(state),
-                    le,
-                    lb,
-                    FITTING_THRESHOLD[vk]
-                )
+                lambda state, le=lineedit, lb=label, pk=param_key, vk=value_key:
+                self.on_checkbox_state_changed(state, le, lb, pk, vk)
             )
 
             # Connect lineedit changes
             lineedit.editingFinished.connect(
-                lambda le=lineedit, vk=value_key, lb=label:
-                self.update_threshold_value(le, vk, lb)
+                lambda le=lineedit, vk=value_key, lb=label, pk=param_key:
+                self.on_value_changed(le, vk, lb, pk)
             )
 
-    def update_threshold_state(self, enabled, lineedit, label, current_value):
-        """Update UI state for threshold controls"""
+    def on_checkbox_state_changed(self, state, lineedit, label, param_key, value_key):
+        """체크박스 상태 변경 시 호출되는 함수"""
+        enabled = bool(state)
+        
+        # UI 상태 업데이트
+        lineedit.setEnabled(enabled)
+        
+        # FITTING_THRESHOLD 업데이트
+        FITTING_THRESHOLD[param_key] = enabled
+        
+        # 라벨 업데이트
+        if enabled:
+            label.setText(f"{FITTING_THRESHOLD[value_key]:.3f}")
+        else:
+            label.setText("Disabled")
+        
+        print(f"DEBUG: Threshold {param_key} enabled={enabled}, value={FITTING_THRESHOLD[value_key]}")
+        print(f"DEBUG: Current FITTING_THRESHOLD: {FITTING_THRESHOLD}")
+
+    def on_value_changed(self, lineedit, value_key, label, param_key):
+        """값 변경 시 호출되는 함수"""
+        try:
+            new_value = float(lineedit.text())
+            if new_value < 0:
+                raise ValueError("Value must be positive")
+            
+            # 값 업데이트
+            FITTING_THRESHOLD[value_key] = new_value
+            
+            # 라벨 업데이트
+            if FITTING_THRESHOLD[param_key]:  # 체크박스가 활성화된 경우에만
+                label.setText(f"{new_value:.3f}")
+            
+            print(f"DEBUG: Threshold {value_key} updated to {new_value}")
+            print(f"DEBUG: Current FITTING_THRESHOLD: {FITTING_THRESHOLD}")
+        except ValueError as e:
+            # 오류 발생 시 원래 값으로 복원
+            lineedit.setText(str(FITTING_THRESHOLD[value_key]))
+            QtWidgets.QMessageBox.warning(
+                self.main,
+                "Invalid Input",
+                f"Please enter a valid positive number: {str(e)}"
+            )
+
+    def update_threshold_state(self, enabled, lineedit, label, current_value, param_key=None):
+        """Update UI state for threshold controls and update FITTING_THRESHOLD"""
         lineedit.setEnabled(enabled)
         if enabled:
             label.setText(f"{current_value:.3f}")
         else:
             label.setText("Disabled")
+            
+        # 파라미터 키가 제공된 경우 FITTING_THRESHOLD 업데이트
+        if param_key:
+            FITTING_THRESHOLD[param_key] = enabled
 
     def update_threshold_value(self, lineedit, value_key, label):
         """Update threshold value in FITTING_THRESHOLD"""
@@ -241,7 +285,6 @@ class SDDSettingsPage(QtCore.QObject):
             'voigt': 2
         }.get(PARAMS.get('fitting_model', 'gaussian'), 0)
         self.ui.CB_fitting_model_sdd.setCurrentIndex(model_index)
-
 
     def fitting_model_changed(self, index):
         """Update fitting model in PARAMS when combobox selection changes"""
