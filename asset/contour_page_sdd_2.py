@@ -1,5 +1,5 @@
 #asset.contour_page_sdd_2.py
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 import numpy as np
 from asset.contour_storage import DATA, PLOT_OPTIONS, PARAMS, PATH_INFO
 from asset.contour_util_gui import IndexRangeSelectionHelper, PeakTempRangeHelper
@@ -283,17 +283,23 @@ class SDDFittingPage(QtCore.QObject):
                 interpolated_data = self.temp_data['interpolated_data']
                 print("DEBUG: Using existing temporary interpolated data for preview")
 
-            preview_graph_option = PLOT_OPTIONS['graph_option'].copy()
-            preview_graph_option['figure_title_enable'] = False
-            preview_graph_option['contour_title_enable'] = False
-            preview_graph_option['temp_title_enable'] = False
-            preview_graph_option['legend'] = False
-            preview_graph_option['temp'] = False
-            preview_graph_option['contour_xlabel_enable'] = False
-            preview_graph_option['contour_ylabel_enable'] = False
+            default_graph_option = {
+                "figure_size": PLOT_OPTIONS["graph_option"]["figure_size"],
+                "figure_dpi": 150,
+                "contour_levels": PLOT_OPTIONS["graph_option"]["contour_levels"],
+                "contour_cmap": PLOT_OPTIONS["graph_option"]["contour_cmap"],
+                "contour_lower_percentile": PLOT_OPTIONS["graph_option"]["contour_lower_percentile"],
+                "contour_upper_percentile": PLOT_OPTIONS["graph_option"]["contour_upper_percentile"],
+                "global_ylim": PLOT_OPTIONS["graph_option"]["global_ylim"],
+                "contour_xlim": PLOT_OPTIONS["graph_option"]["contour_xlim"],
+                "font_tick": PLOT_OPTIONS["graph_option"]["font_tick"],
+            }
             
-            fig, ax = plt.subplots(figsize=PLOT_OPTIONS['graph_option']['figure_size'], 
-                                dpi=PLOT_OPTIONS['graph_option']['figure_dpi'])
+            graph_option = {}
+            final_opt = {**default_graph_option, **graph_option}
+            
+            fig, ax = plt.subplots(figsize=final_opt['figure_size'], 
+                                dpi=final_opt['figure_dpi'])
             
             grid_q = interpolated_data['grid_q']
             grid_time = interpolated_data['grid_time'] 
@@ -301,20 +307,24 @@ class SDDFittingPage(QtCore.QObject):
             
             # 경계값 가져오기
             lower_bound = interpolated_data.get('lower_bound', 
-                        np.nanpercentile(grid_intensity, PLOT_OPTIONS['graph_option']['contour_lower_percentile']))
+                        np.nanpercentile(grid_intensity, final_opt['contour_lower_percentile']))
             upper_bound = interpolated_data.get('upper_bound',
-                        np.nanpercentile(grid_intensity, PLOT_OPTIONS['graph_option']['contour_upper_percentile']))
+                        np.nanpercentile(grid_intensity, final_opt['contour_upper_percentile']))
             
             cp = ax.contourf(grid_q, grid_time, grid_intensity,
-                            levels=PLOT_OPTIONS['graph_option']['contour_levels'],
-                            cmap=PLOT_OPTIONS['graph_option']['contour_cmap'],
+                            levels=final_opt['contour_levels'],
+                            cmap=final_opt['contour_cmap'],
                             vmin=lower_bound, vmax=upper_bound)
             
-            # 축 범위 설정 적용
-            if PLOT_OPTIONS['graph_option'].get('contour_xlim'):
-                ax.set_xlim(PLOT_OPTIONS['graph_option']['contour_xlim'])
-            if PLOT_OPTIONS['graph_option'].get('global_ylim'):
-                ax.set_ylim(PLOT_OPTIONS['graph_option']['global_ylim'])
+            # Set limits if provided
+            if final_opt["contour_xlim"] is not None:
+                ax.set_xlim(final_opt["contour_xlim"])
+            if final_opt["global_ylim"] is not None:
+                ax.set_ylim(final_opt["global_ylim"])
+
+            plt.xticks(fontname=final_opt["font_tick"])
+            plt.yticks(fontname=final_opt["font_tick"])
+
             
             canvas = FigureCanvas(fig)
             
@@ -465,11 +475,15 @@ class SDDFittingPage(QtCore.QObject):
             self.main.parent().contour_plot_page.create_contour_plot()
             
             # Show success message and return to previous page
-            QtWidgets.QMessageBox.information(
+            msg_box = QtWidgets.QMessageBox.information(
                 self.main,
                 "Success",
                 "SDD correction has been applied successfully."
             )
+
+            font = QtGui.QFont("Segoe UI", 12)
+            msg_box.setFont(font)
+
             self.on_back()
             
         except Exception as e:
