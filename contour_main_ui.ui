@@ -929,6 +929,25 @@
                </widget>
               </item>
               <item>
+               <widget class="QFrame" name="frame_38">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_14">
+                 <item>
+                  <widget class="QPushButton" name="PB_SDD_correction">
+                   <property name="text">
+                    <string>SDD Correction</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <widget class="QFrame" name="frame_37">
                 <property name="frameShape">
                  <enum>QFrame::StyledPanel</enum>
@@ -1310,9 +1329,9 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="PB_SDD_correction">
+               <widget class="QPushButton" name="PB_exit">
                 <property name="text">
-                 <string>SDD Correction</string>
+                 <string>Exit</string>
                 </property>
                </widget>
               </item>

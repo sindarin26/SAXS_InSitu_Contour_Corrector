@@ -26,6 +26,8 @@ class ContourPlotPage(QtCore.QObject):
         self.PB_contour_setting = self.main.ui.PB_contour_setting
         self.PB_SDD_correction = self.main.ui.PB_SDD_correction
         self.PB_peak_export = self.main.ui.PB_peak_export
+
+        self.PB_exit = self.main.ui.PB_exit
         
         # 추가: 온도, 데이터 내보내기 토글 버튼
         self.PB_export_temp_on = self.main.ui.PB_export_temp_on
@@ -92,6 +94,8 @@ class ContourPlotPage(QtCore.QObject):
         self.PB_open_output_folder.clicked.connect(self.open_output_folder)
 
         self.PB_peak_export.clicked.connect(self.start_peak_export)
+
+        self.PB_exit.clicked.connect(self.exit_application)
 
     def on_page_entered(self):
         """Handle initial setup when page is displayed"""
@@ -452,3 +456,19 @@ class ContourPlotPage(QtCore.QObject):
             return
         
         PeakExportDialog(self.main).exec_()
+
+    def exit_application(self):
+        """애플리케이션 종료"""
+        font = QtGui.QFont("Segoe UI", 12)
+        msg = QtWidgets.QMessageBox(self.main)
+        msg.setFont(font)
+        msg.setWindowTitle('Exit Confirmation')
+        msg.setText('Are you sure you want to exit the program?')
+        msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        msg.setDefaultButton(QtWidgets.QMessageBox.No)
+        
+        reply = msg.exec_()
+        
+        if reply == QtWidgets.QMessageBox.Yes:
+            # 필요한 정리 작업 수행
+            QtWidgets.QApplication.quit()
