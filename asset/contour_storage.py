@@ -81,7 +81,7 @@ PLOT_OPTIONS = {
         "contour_ylabel_text": "Elapsed Time",
         "temp_xlabel_enable": True,
         "temp_xlabel_text": "Temperature",
-        "temp_ylabel_enable": True,
+        "temp_ylabel_enable": False,
         "temp_ylabel_text": "Elapsed Time",
 
         # Grid 및 범위 설정
