@@ -30,6 +30,11 @@ class SDDCorrectionDialog(QtWidgets.QDialog):
         self.ui.PB_next_1.clicked.connect(self.start_peak_tracking)
         self.ui.PB_sdd_correction_start.clicked.connect(self.start_sdd_fitting)
         self.ui.PB_quit.clicked.connect(self.close)  # Connect PB_quit to close the dialog
+
+        self.ui.PB_quit.setAutoDefault(False)
+        self.ui.PB_quit.setDefault(False)
+        self.ui.PB_next_1.setAutoDefault(False)
+        self.ui.PB_next_1.setDefault(False)
         
         # Set initial states
         self.ui.stackedWidget.setCurrentIndex(0)

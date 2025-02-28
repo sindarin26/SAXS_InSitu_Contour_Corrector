@@ -117,7 +117,8 @@ class SDDSettingsPage(QtCore.QObject):
         }
         for le_name, (param_name, convert_type) in param_mappings.items():
             line_edit = getattr(self.ui, le_name)
-            line_edit.returnPressed.connect(
+            # returnPressed 대신 editingFinished 사용
+            line_edit.editingFinished.connect(
                 self.create_update_callback(line_edit, param_name, convert_type)
             )
 

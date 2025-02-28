@@ -1,6 +1,6 @@
 #asset.tempcorrectionpage.py
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from asset.contour_storage import DATA, PATH_INFO, PARAMS, PROCESS_STATUS
 from asset.page_asset import LoadingDialog
 from asset.contour_util_gui import TempCorrectionHelper, create_plot_widget
@@ -247,12 +247,21 @@ class TempCorrectionPage(QtCore.QObject):
         self.plot_corrected_data()
         self.reset_adjustment()
         
-        # Show success message
-        QtWidgets.QMessageBox.information(
-            self.main,
+        # 성공 메시지 - 폰트 변경
+        msg_box = QtWidgets.QMessageBox(
+            QtWidgets.QMessageBox.Information,
             "Success",
-            "Temperature correction has been applied successfully."
+            "Temperature correction has been applied successfully.",
+            QtWidgets.QMessageBox.Ok,
+            self.main
         )
+        
+        # 폰트 설정
+        font = QtGui.QFont("Segoe UI", 12)
+        msg_box.setFont(font)
+        
+        # 메시지 박스 표시
+        msg_box.exec_()
 
     def gotoNextPage(self):
         """Prepare data and move to next page"""

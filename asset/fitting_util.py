@@ -150,7 +150,21 @@ def find_peak(contour_data, Index_number=0, input_range=None, peak_info=None,
         # bounds 파라미터 추가
         popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0, bounds=bounds)
     except Exception as e:
-        return f"Fitting failed with {fitting_function}: {str(e)}"
+        # 사용자 친화적인 에러 메시지로 변경
+        error_str = str(e)
+        print(f"DEBUG: Original curve fitting error: {error_str}")
+        
+        # 간결하고 사용자 친화적인 에러 메시지 반환
+        if "Optimal parameters not found" in error_str:
+            return "Failed to find optimal peak parameters in selected range"
+        elif "array must not contain infs or NaNs" in error_str:
+            return "Invalid data values detected in selected range"
+        elif "empty range" in error_str or "singular matrix" in error_str:
+            return "Selected range is too narrow or doesn't contain a valid peak"
+        else:
+            # 기타 에러는 더 일반적인 메시지로 변환
+            return f"Failed to fit {fitting_function} model to selected data"
+
     
     # Get peak position and intensity
     if fitting_function.lower() == "lorentzian":
@@ -355,7 +369,7 @@ def find_peak_extraction(
     try:
         data_entry = contour_data["Data"][Index_number]
     except (KeyError, IndexError):
-        return f"Index {Index_number} is out of range for contour_data"
+        return f"Invalid frame index: {Index_number}"
 
     q_arr = np.array(data_entry["q"])
     intensity_arr = np.array(data_entry["Intensity"])
@@ -364,7 +378,7 @@ def find_peak_extraction(
     q_min, q_max = input_range
     mask = (q_arr >= q_min) & (q_arr <= q_max)
     if not np.any(mask):
-        return "No data points found within the specified input range"
+        return "No data points found in selected range"
 
     q_subset = q_arr[mask]
     intensity_subset = intensity_arr[mask]
@@ -422,7 +436,20 @@ def find_peak_extraction(
         # bounds 파라미터 추가
         popt, _ = curve_fit(fit_func, q_subset, intensity_subset, p0=p0, bounds=bounds)
     except Exception as e:
-        return f"Fitting failed with {fitting_function}: {str(e)}"
+        # 사용자 친화적인 에러 메시지로 변경
+        error_str = str(e)
+        print(f"DEBUG: Original curve fitting error: {error_str}")
+        
+        # 간결하고 사용자 친화적인 에러 메시지 반환
+        if "Optimal parameters not found" in error_str:
+            return "Failed to find optimal peak parameters in selected range"
+        elif "array must not contain infs or NaNs" in error_str:
+            return "Invalid data values detected in selected range"
+        elif "empty range" in error_str or "singular matrix" in error_str:
+            return "Selected range is too narrow or doesn't contain a valid peak"
+        else:
+            # 기타 에러는 더 일반적인 메시지로 변환
+            return f"Failed to fit {fitting_function} model to selected data"
 
 
     # 7) 피크 위치 및 강도 계산
