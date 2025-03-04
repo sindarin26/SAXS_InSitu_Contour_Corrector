@@ -474,15 +474,14 @@ class SDDFittingPage(QtCore.QObject):
             # Trigger contour plot update in the main window
             self.main.parent().contour_plot_page.create_contour_plot()
             
-            # Show success message and return to previous page
-            msg_box = QtWidgets.QMessageBox.information(
-                self.main,
-                "Success",
-                "SDD correction has been applied successfully."
-            )
-
+            # Show success message (수정된 부분)
+            msg_box = QtWidgets.QMessageBox(self.main)
+            msg_box.setIcon(QtWidgets.QMessageBox.Information)
+            msg_box.setWindowTitle("Success")
+            msg_box.setText("SDD correction has been applied successfully.")
             font = QtGui.QFont("Segoe UI", 12)
             msg_box.setFont(font)
+            msg_box.exec_()
 
             self.on_back()
             

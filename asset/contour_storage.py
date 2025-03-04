@@ -16,9 +16,9 @@ PATH_INFO = {
 
 # Experiment parameters
 PARAMS = {
-    'original_sdd': 227.7524,
-    'beam_center_x': 955.1370,
-    'beam_center_y': 633.0930,
+    'original_sdd': None,
+    'beam_center_x': None,
+    'beam_center_y': None,
     'pixel_size': 0.0886,
     'experiment_energy': 19.78,
     'converted_energy': 8.042,
