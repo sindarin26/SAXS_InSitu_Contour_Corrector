@@ -749,7 +749,7 @@ class Ui_Peak_export_manager(object):
         self.L_fwhm_q_threshold.setText(_translate("Peak_export_manager", "Current Value"))
         self.CkB_fwhm_comparison.setText(_translate("Peak_export_manager", "FWHM comparison"))
         self.L_fwhm_comparison.setText(_translate("Peak_export_manager", "Current Value"))
-        self.label_5.setText(_translate("Peak_export_manager", "hyungju@postech.ac.kr, yhkim26@postech.ac.kr"))
+        self.label_5.setText(_translate("Peak_export_manager", "hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr"))
         self.label_11.setText(_translate("Peak_export_manager", "9A Beamline, PAL"))
         self.PB_quit.setText(_translate("Peak_export_manager", "Quit"))
         self.PB_next_1.setText(_translate("Peak_export_manager", "Next"))

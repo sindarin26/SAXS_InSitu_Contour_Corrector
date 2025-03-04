@@ -363,7 +363,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>Last Update: FEB, 2025</string>
+                 <string>Last Update: MAR, 2025</string>
                 </property>
                </widget>
               </item>
@@ -376,29 +376,10 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_11">
-                <property name="font">
-                 <font>
-                  <family>Segoe UI</family>
-                  <pointsize>12</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>9A Beamline, PAL</string>
+                 <string>hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-                <property name="indent">
-                 <number>6</number>
                 </property>
                </widget>
               </item>

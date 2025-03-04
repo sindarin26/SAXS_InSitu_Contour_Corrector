@@ -1089,7 +1089,7 @@ class Ui_SDD_correction(object):
         self.L_fwhm_q_threshold.setText(_translate("SDD_correction", "Current Value"))
         self.CkB_fwhm_comparison.setText(_translate("SDD_correction", "FWHM comparison"))
         self.L_fwhm_comparison.setText(_translate("SDD_correction", "Current Value"))
-        self.label_5.setText(_translate("SDD_correction", "hyungju@postech.ac.kr, yhkim26@postech.ac.kr"))
+        self.label_5.setText(_translate("SDD_correction", "hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr"))
         self.label_11.setText(_translate("SDD_correction", "9A Beamline, PAL"))
         self.PB_quit.setText(_translate("SDD_correction", "Quit"))
         self.PB_next_1.setText(_translate("SDD_correction", "Next"))

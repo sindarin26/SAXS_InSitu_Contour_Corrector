@@ -1488,7 +1488,7 @@
                 </font>
                </property>
                <property name="text">
-                <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
+                <string>hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
