@@ -130,10 +130,18 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    # Set application icon
-    if os.path.exists("9A.ico"):
-        app_icon = QtGui.QIcon("9A.ico")
-        app.setWindowIcon(app_icon)
+    # PyInstaller 실행 환경에서 아이콘 경로 설정
+    if getattr(sys, 'frozen', False):  # PyInstaller로 빌드된 실행 파일인지 확인
+        base_path = sys._MEIPASS  # PyInstaller의 임시 디렉토리
+    else:
+        base_path = os.path.abspath(".")
+
+    icon_path = os.path.join(base_path, "9A.ico")
+    
+    # 아이콘이 존재하면 설정
+    if os.path.exists(icon_path):
+        app_icon = QtGui.QIcon(icon_path)
+        app.setWindowIcon(app_icon) 
 
     # 스타일 설정
     app.setStyle("Fusion")

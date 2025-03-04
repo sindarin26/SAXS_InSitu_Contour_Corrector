@@ -45,6 +45,8 @@ class SDDSettingsPage(QtCore.QObject):
         self.ui.LE_converted_energy.setText(str(PARAMS['converted_energy']))
         self.ui.LE_beam_center_x.setText(str(PARAMS['beam_center_x']))
         self.ui.LE_beam_center_y.setText(str(PARAMS['beam_center_y']))
+
+        self.PB_next_1 = self.ui.PB_next_1
     
     def setup_threshold_ui(self):
         """Initialize threshold UI elements"""
@@ -185,11 +187,12 @@ class SDDSettingsPage(QtCore.QObject):
         except ValueError as e:
             # 오류 발생 시 원래 값으로 복원
             lineedit.setText(str(FITTING_THRESHOLD[value_key]))
-            QtWidgets.QMessageBox.warning(
-                self.main,
-                "Invalid Input",
-                f"Please enter a valid positive number: {str(e)}"
-            )
+            # QtWidgets.QMessageBox.warning(
+            #     self.main,
+            #     "Invalid Input",
+            #     f"Please enter a valid positive number: {str(e)}"
+            # )
+            print(f"DEBUG: Error occurred: {str(e)}")
 
     def update_threshold_state(self, enabled, lineedit, label, current_value, param_key=None):
         """Update UI state for threshold controls and update FITTING_THRESHOLD"""
@@ -214,11 +217,12 @@ class SDDSettingsPage(QtCore.QObject):
         except ValueError as e:
             # Restore previous value
             lineedit.setText(str(FITTING_THRESHOLD[value_key]))
-            QtWidgets.QMessageBox.warning(
-                self.main,
-                "Invalid Input",
-                f"Please enter a valid positive number: {str(e)}"
-            )
+            # QtWidgets.QMessageBox.warning(
+            #     self.main,
+            #     "Invalid Input",
+            #     f"Please enter a valid positive number: {str(e)}"
+            # )
+            print(f"DEBUG: Error occurred: {str(e)}")
 
     def create_update_callback(self, line_edit, param_name, convert_type):
         """각 QLineEdit에 대해 현재 값을 캡쳐한 콜백 함수 생성"""
@@ -228,19 +232,33 @@ class SDDSettingsPage(QtCore.QObject):
 
     def update_labels(self):
         """PARAMS의 현재 값으로 라벨(L_*)들을 업데이트"""
-        for label_name, (param_name, format_spec, unit) in self.LABEL_MAPPINGS.items():
-            label = getattr(self.ui, label_name)
-            value = PARAMS[param_name]
-            
-            # converted_energy가 0인 경우 "None"으로 표시
-            if param_name == 'converted_energy' and value == 0:
-                label.setText("None")
-                continue
-            
-            text = f"{value:{format_spec}}" if format_spec else str(value)
-            if unit:
-                text += f" {unit}"
-            label.setText(text)
+
+        try:
+            for label_name, (param_name, format_spec, unit) in self.LABEL_MAPPINGS.items():
+                label = getattr(self.ui, label_name)
+                value = PARAMS.get(param_name)
+                
+                # None 값 처리
+                if value is None:
+                    label.setText("None")
+                    continue
+                
+                # 정상적인 값 처리
+                try:
+                    if format_spec:
+                        text = f"{value:{format_spec}}"
+                    else:
+                        text = str(value)
+                        
+                    if unit:
+                        text += f" {unit}"
+                        
+                    label.setText(text)
+                except (ValueError, TypeError):
+                    # 포맷팅 실패 시 기본 처리
+                    label.setText(f"{str(value)} {unit}" if unit else str(value))
+        finally:
+            self.checkNextButtonState()
 
     def update_param(self, line_edit, param_name, convert_type):
         """
@@ -254,11 +272,12 @@ class SDDSettingsPage(QtCore.QObject):
             self.update_labels()
         except ValueError:
             line_edit.setText(str(PARAMS[param_name]))
-            QtWidgets.QMessageBox.warning(
-                self.main,
-                "Error",
-                f"Please enter a valid {convert_type.__name__} for {param_name}"
-            )
+            # QtWidgets.QMessageBox.warning(
+            #     self.main,
+            #     "Error",
+            #     f"Please enter a valid {convert_type.__name__} for {param_name}"
+            # )
+            print(f"DEBUG: Error occurred: Invalid input for {param_name}")
 
     def q_format_changed(self, index):
         """
@@ -291,3 +310,26 @@ class SDDSettingsPage(QtCore.QObject):
         """Update fitting model in PARAMS when combobox selection changes"""
         models = ['gaussian', 'lorentzian', 'voigt']
         PARAMS['fitting_model'] = models[index]
+
+
+    def checkRequiredParams(self):
+        """필수 PARAMS 값이 None이 아닌지 확인"""
+        # converted_energy는 제외하고 검사
+        required_params = ['original_sdd', 'beam_center_x', 'beam_center_y', 
+                        'pixel_size', 'experiment_energy', 
+                        'image_size_x', 'image_size_y']
+        
+        for param in required_params:
+            if PARAMS.get(param) is None:
+                return False
+        
+        return True
+
+    def checkNextButtonState(self):
+        """Next 버튼의 활성화 상태를 검사하고 설정"""
+        
+        # 필수 PARAMS 값 확인 (새로 추가)
+        params_condition = self.checkRequiredParams()
+        
+        # 모든 조건이 만족되어야 Next 버튼 활성화
+        self.PB_next_1.setEnabled(params_condition)
