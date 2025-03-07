@@ -751,19 +751,12 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_10">
               <item>
-               <widget class="QLabel" name="label_7">
-                <property name="text">
-                 <string>Last Update: FEB, 2025</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QLabel" name="label_8">
                 <property name="text">
-                 <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
+                 <string>hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -1255,19 +1248,12 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_16">
               <item>
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Last Update: FEB, 2025</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QLabel" name="label_10">
                 <property name="text">
-                 <string>hyungju@postech.ac.kr, yhkim26@postech.ac.kr</string>
+                 <string>hyungju@postech.ac.kr, yeongsik@postech.ac.kr, yhkim26@postech.ac.kr</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
