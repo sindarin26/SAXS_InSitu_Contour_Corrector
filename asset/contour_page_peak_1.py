@@ -43,6 +43,7 @@ class PeakTrackingPage(QtCore.QObject):
         self.PB_adjust_mode = self.ui.PB_adjust_mode
         self.PB_find_another_peak = self.ui.PB_find_another_peak
         self.PB_check_peak_range = self.ui.PB_check_peak_range  # 피크 범위 확인 버튼 추가
+        self.PB_go_to_export_page = self.ui.PB_go_to_export_page  # 엑스포트 페이지 버튼 추가
         
         # Set initial button text
         self.PB_adjust_mode.setText("Adjust Mode")
@@ -59,6 +60,7 @@ class PeakTrackingPage(QtCore.QObject):
         
         # Connect signals
         self.connect_signals()
+
     
     def connect_signals(self):
         """Connect UI signals to handlers"""
@@ -196,6 +198,9 @@ class PeakTrackingPage(QtCore.QObject):
         # Page 2 states depend on current tracking state
         waiting_state = not self.auto_tracking and not self.manual_adjust and not self.check_peak_range_mode
         
+        # Check if any peaks have been found
+        has_found_peaks = len(self.main.PEAK_EXTRACT_DATA['found_peak_list']) > 0
+        
         # During auto tracking, only Next and Stop buttons are enabled
         if self.auto_tracking and not self.manual_adjust:
             self.PB_next.setEnabled(True)
@@ -203,6 +208,7 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_adjust_mode.setEnabled(False)
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(False)
+            self.PB_go_to_export_page.setEnabled(False)  # 추적 중에는 내보내기 비활성화
         # In check peak range mode with peak selected, enable Next
         elif self.check_peak_range_mode and self.current_peak_name is not None:
             self.PB_next.setEnabled(True)
@@ -211,6 +217,7 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(True)  # Cancel 버튼으로 사용
             self.PB_check_peak_range.setText("Cancel")
+            self.PB_go_to_export_page.setEnabled(False)  # 범위 체크 모드에서는 내보내기 비활성화
         # In check peak range mode without peak selected
         elif self.check_peak_range_mode and self.current_peak_name is None:
             self.PB_next.setEnabled(False)
@@ -219,6 +226,7 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(True)  # Cancel 버튼으로 사용
             self.PB_check_peak_range.setText("Cancel")
+            self.PB_go_to_export_page.setEnabled(False)  # 범위 체크 모드에서는 내보내기 비활성화
         # In adjustment mode with peak selected, enable Next
         elif self.manual_adjust and self.current_peak_name is not None:
             self.PB_next.setEnabled(True)
@@ -226,6 +234,7 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_adjust_mode.setEnabled(True)  # Always enabled to toggle mode
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(False)
+            self.PB_go_to_export_page.setEnabled(False)  # 조정 모드에서는 내보내기 비활성화
         # In adjustment mode without peak selected
         elif self.manual_adjust and self.current_peak_name is None:
             self.PB_next.setEnabled(False)
@@ -233,16 +242,16 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_adjust_mode.setEnabled(True)  # Always enabled to toggle mode
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(False)
+            self.PB_go_to_export_page.setEnabled(False)  # 조정 모드에서는 내보내기 비활성화
         # In waiting state (tracking complete or stopped)
         elif waiting_state:
             self.PB_next.setEnabled(False)
             self.PB_stop_auto_tracking.setEnabled(False)
             self.PB_adjust_mode.setEnabled(True)
             self.PB_find_another_peak.setEnabled(True)
-            self.PB_check_peak_range.setEnabled(
-                len(self.main.PEAK_EXTRACT_DATA['found_peak_list']) > 0
-            )
+            self.PB_check_peak_range.setEnabled(has_found_peaks)
             self.PB_check_peak_range.setText("Check Peak Range")
+            self.PB_go_to_export_page.setEnabled(has_found_peaks)  # 피크가 발견된 경우에만 내보내기 활성화
         # Default state
         else:
             self.PB_next.setEnabled(False)
@@ -250,6 +259,7 @@ class PeakTrackingPage(QtCore.QObject):
             self.PB_adjust_mode.setEnabled(False)
             self.PB_find_another_peak.setEnabled(False)
             self.PB_check_peak_range.setEnabled(False)
+            self.PB_go_to_export_page.setEnabled(False)  # 기본 상태에서는 내보내기 비활성화
             
         # Print current state for debugging
         print(f"UI State - auto_tracking: {self.auto_tracking}, manual_adjust: {self.manual_adjust}, check_peak_range: {self.check_peak_range_mode}, current_peak: {self.current_peak_name}")
