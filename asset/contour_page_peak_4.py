@@ -227,8 +227,8 @@ class QRangeIndexPage(QtCore.QObject):
             )
             return
             
-        # 성공 시 결과 처리
-        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params = result
+        # 성공 시 결과 처리 - raw peak 데이터 포함해서 9개 값 언팩
+        peak_q, peak_intensity, output_range, fwhm, peak_name, fitting_function, fitting_params, peak_q_max_raw, peak_intensity_max_raw = result
         
         # 업데이트된 데이터를 저장할 변수
         updated_entry = None
@@ -236,14 +236,16 @@ class QRangeIndexPage(QtCore.QObject):
         # 기존 데이터 업데이트
         for i, entry in enumerate(self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data']):
             if entry.get('frame_index') == frame_index and entry.get('peak_name') == peak_name:
-                # 기존 엔트리 업데이트
+                # 기존 엔트리 업데이트 - raw peak 데이터 포함
                 self.main.PEAK_EXTRACT_DATA['tracked_peaks']['Data'][i].update({
                     'peak_q': peak_q,
                     'peak_Intensity': peak_intensity,
                     'fwhm': fwhm,
                     'output_range': output_range,
                     'fitting_function': fitting_function,
-                    'fitting_params': fitting_params
+                    'fitting_params': fitting_params,
+                    'peak_q_max_raw': peak_q_max_raw,
+                    'peak_intensity_max_raw': peak_intensity_max_raw
                 })
                 
                 # 참조 저장 (나중에 사용)
